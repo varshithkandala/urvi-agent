@@ -210,6 +210,13 @@ function hideTypingIndicator() {
 // "let isSending" prevents the user from firing multiple requests at once
 let isSending = false;
 
+/*
+  conversation holds the running back-and-forth so the backend can give
+  context-aware replies. Each entry is { role: 'user'|'assistant', content }.
+  We send this array with every request and append the bot's reply to it.
+*/
+const conversation = [];
+
 async function sendMessage() {
   // Read the text from the input and remove extra spaces from the ends
   const text = userInput.value.trim();
@@ -248,7 +255,8 @@ async function sendMessage() {
       headers: {
         'Content-Type': 'application/json',  // "I'm sending you JSON"
       },
-      body: JSON.stringify({ message: text }), // Convert JS object → JSON string
+      // Send the new message plus the conversation so far (for memory)
+      body: JSON.stringify({ message: text, history: conversation }),
     });
 
     /*
@@ -274,6 +282,10 @@ async function sendMessage() {
 
     // Display the bot's reply on the left side of the chat
     addMessage(botReply, 'bot');
+
+    // Record this exchange so the next request includes it as context
+    conversation.push({ role: 'user', content: text });
+    conversation.push({ role: 'assistant', content: botReply });
 
   } catch (error) {
     /*
