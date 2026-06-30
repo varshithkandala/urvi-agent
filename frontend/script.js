@@ -4,93 +4,119 @@
   ═══════════════════════════════════════════════════════════════════
 
   HOW THIS FILE IS ORGANIZED:
-    1. Grab references to all the HTML elements we'll need
-    2. Set up the opening welcome message
-    3. Functions for toggling the chat open/closed
-    4. Function to add a message bubble to the screen
-    5. Function to show/hide the typing indicator
-    6. Function to send a message to the backend and show the reply
-    7. Event listeners (wire up clicks and keypresses)
+    1.  Grab references to all HTML elements we need
+    2.  Conversation history array
+    3.  Open / close the chat window
+    4.  Greeting bubble logic (auto-pop + click / dismiss)
+    5.  Image upload (paperclip button, preview, add image to chat)
+    6.  Add a message bubble to the screen
+    7.  Feedback buttons (thumbs up / down under bot messages)
+    8.  Add the welcome message + quick-reply chips
+    9.  Show / hide the animated typing indicator
+    10. Core send function — fetches the backend and shows the reply
+    11. Talk to Montessori Mentor button
+    12. Utility: scroll to the bottom of the message area
+    13. Initialise everything once the page has loaded
 
-  BACKEND ENDPOINT:
+  BACKEND ENDPOINT (do not change index.js):
     POST http://localhost:3000/chat
     Request body:  { "message": "user's text here" }
-    Response body: { "reply": "bot's response here" }
+    Response body: { "reply": "bot's reply here" }
+
+  HOW TO SWITCH TO FULL CONVERSATION HISTORY LATER:
+    1. Update the backend to read req.body.messages (array) instead of req.body.message
+    2. In sendMessageText() below, replace:
+         body: JSON.stringify({ message: text })
+       with:
+         body: JSON.stringify({ messages: conversationHistory })
+    The conversationHistory array is already kept up-to-date.
   ═══════════════════════════════════════════════════════════════════
 */
 
 
 /* ── 1. GRAB HTML ELEMENTS ──────────────────────────────────────── */
 /*
-  document.getElementById() finds an element in the HTML by its id="..."
-  attribute and gives us a JavaScript reference to it so we can
-  read from it, write to it, or listen for clicks on it.
+  document.getElementById() finds an element by its id="..." attribute
+  and gives us a JavaScript handle so we can read, write, and listen on it.
 */
 
-const chatBubble      = document.getElementById('chat-bubble');       // The floating round button
-const chatWindow      = document.getElementById('chat-window');       // The chat popup window
-const chatMessages    = document.getElementById('chat-messages');     // The scrollable message area
-const userInput       = document.getElementById('user-input');        // The text input field
-const sendBtn         = document.getElementById('send-btn');          // The send (arrow) button
-const closeBtn        = document.getElementById('close-btn');         // The X button inside the header
-const bubbleIconOpen  = document.getElementById('bubble-icon-open');  // Chat icon on the bubble
-const bubbleIconClose = document.getElementById('bubble-icon-close'); // X icon on the bubble (when open)
+const chatBubble      = document.getElementById('chat-bubble');        // Round floating button
+const chatWindow      = document.getElementById('chat-window');        // The popup chat panel
+const chatMessages    = document.getElementById('chat-messages');      // Scrollable message area
+const userInput       = document.getElementById('user-input');         // Text input field
+const sendBtn         = document.getElementById('send-btn');           // Arrow send button
+const closeBtn        = document.getElementById('close-btn');          // X inside the header
+const bubbleLogo      = document.getElementById('bubble-logo');        // School logo in the bubble
+const bubbleIconClose = document.getElementById('bubble-icon-close'); // X icon in the bubble
+const greetingBubbles = document.getElementById('greeting-bubbles');  // Container for greeting tips
+
+// ── NEW: image upload elements ───────────────────────────────────
+const imageBtn        = document.getElementById('image-btn');          // Paperclip button
+const imageInput      = document.getElementById('image-input');        // Hidden <input type="file">
+const imagePreviewBar = document.getElementById('image-preview-bar'); // Strip showing the thumbnail
+const imageRemoveBtn  = document.getElementById('image-remove-btn');  // ✕ inside the preview strip
+
+// ── NEW: mentor + feedback elements ─────────────────────────────
+const mentorBtn       = document.getElementById('mentor-btn');         // "Talk to Mentor" button
 
 
-/* ── 2. WELCOME MESSAGE ─────────────────────────────────────────── */
+/* ── 2. CONVERSATION HISTORY ────────────────────────────────────── */
 /*
-  This is the first message the user sees when they open the chat.
-  We add it to the screen as soon as the page loads using addMessage().
-  (addMessage is defined in section 4 below.)
+  Every message (user and bot) is saved here in order.
+  Format: { role: 'user' | 'bot', text: 'message string' }
+
+  Currently the backend only reads { message } (the latest text).
+  Keeping history here means we can switch to sending the full array
+  later without restructuring the code — see the comment at the top.
 */
-
-const WELCOME_MESSAGE =
-  "Hi there! I'm here to help with anything about Urvi Montessori — " +
-  "admissions, fees, timings, or our programs. What can I help with?";
-
-// Wait until the HTML document is fully loaded before running our setup code
-document.addEventListener('DOMContentLoaded', function () {
-  // Show the welcome message as a bot message (not user-sent)
-  addMessage(WELCOME_MESSAGE, 'bot');
-});
+const conversationHistory = [];
 
 
 /* ── 3. OPEN / CLOSE THE CHAT WINDOW ───────────────────────────── */
 
 /*
-  isOpen tracks whether the chat window is currently visible.
-  We start it as false (chat is closed on page load).
+  isOpen tracks whether the chat is currently visible.
+  We start closed (false) so the widget is unobtrusive on page load.
 */
 let isOpen = false;
 
-/*
-  openChat() — makes the chat window visible.
-  It removes the "hidden" CSS class (which hides the window with opacity:0).
-  Then it flips the bubble icons and moves focus into the input field.
-*/
 function openChat() {
   isOpen = true;
-  chatWindow.classList.remove('hidden');  // Remove the hidden class → window appears
-  bubbleIconOpen.style.display  = 'none'; // Hide the chat icon
-  bubbleIconClose.style.display = '';     // Show the X icon on the bubble
-  userInput.focus();                      // Auto-focus so user can type right away
+
+  // Reveal the chat window (CSS transition handles the bounce animation)
+  chatWindow.classList.remove('hidden');
+
+  // Swap logo → X icon on the bubble button
+  bubbleLogo.style.display      = 'none';
+  bubbleIconClose.style.display = 'block';
+
+  // Add .is-open so CSS pauses the float + ring animations on the bubble
+  chatBubble.classList.add('is-open');
+  chatBubble.setAttribute('aria-label', 'Close chat');
+
+  // Dismiss any greeting tooltips (they've done their job)
+  hideAllGreetings();
+
+  // Focus the input so the user can start typing immediately
+  // Small delay lets the CSS animation settle before we steal focus
+  setTimeout(() => userInput.focus(), 60);
 }
 
-/*
-  closeChat() — hides the chat window.
-  Adding the "hidden" class triggers the CSS fade-out animation.
-*/
 function closeChat() {
   isOpen = false;
-  chatWindow.classList.add('hidden');     // Add hidden class → window fades out
-  bubbleIconOpen.style.display  = '';    // Show the chat icon again
-  bubbleIconClose.style.display = 'none'; // Hide the X icon
+
+  // Hide the chat window
+  chatWindow.classList.add('hidden');
+
+  // Swap X icon → logo on the bubble button
+  bubbleLogo.style.display      = 'block';
+  bubbleIconClose.style.display = 'none';
+
+  // Re-enable the float + ring animations
+  chatBubble.classList.remove('is-open');
+  chatBubble.setAttribute('aria-label', 'Open chat');
 }
 
-/*
-  toggleChat() — called when the bubble button is clicked.
-  If the chat is open, close it. If it's closed, open it.
-*/
 function toggleChat() {
   if (isOpen) {
     closeChat();
@@ -100,273 +126,582 @@ function toggleChat() {
 }
 
 
-/* ── 4. ADD A MESSAGE BUBBLE TO THE SCREEN ──────────────────────── */
+/* ── 4. GREETING BUBBLES ────────────────────────────────────────── */
 /*
-  addMessage(text, sender) creates a new message bubble and appends
-  it to the chat messages area.
+  Two small speech-bubble tooltips pop up near the chat button after
+  a short delay to invite the user to start a conversation.
 
-  Parameters:
-    text   — the string of text to display inside the bubble
-    sender — either 'bot', 'user', or 'error' (controls styling and label)
-
-  This function:
-    1. Creates a wrapper <div class="message bot/user">
-    2. Creates the bubble <div class="bubble"> with the text inside
-    3. Creates a small label ("Urvi" or "You") below the bubble
-    4. Appends everything to the messages container
-    5. Scrolls the container down so the new message is always visible
+  Behaviour:
+    • Clicking the bubble text → opens the chat and sends that text
+    • Clicking ✕             → dismisses just that bubble
+    • Opening the chat        → dismisses all remaining bubbles
 */
-function addMessage(text, sender) {
-  // Create the outer wrapper div
-  const messageDiv = document.createElement('div');
-  messageDiv.classList.add('message', sender); // e.g. class="message bot"
 
-  // Create the bubble div that contains the message text
-  const bubble = document.createElement('div');
-  bubble.classList.add('bubble');
-  bubble.textContent = text; // .textContent is safe — it won't execute any HTML/scripts
+/*
+  Each entry matches an element id in the HTML and the text it shows.
+  They appear bottom-to-top: greeting-1 first (closest to button),
+  then greeting-2 (above it) 0.7 seconds later.
+*/
+const GREETINGS = [
+  { id: 'greeting-1', text: 'Hello! New to Urvi? 🌱' },
+  { id: 'greeting-2', text: 'Ask me anything about us ✨' },
+];
 
-  // Create the small label below the bubble
-  const label = document.createElement('div');
-  label.classList.add('message-label');
-  if (sender === 'user') {
-    label.textContent = 'You';
-  } else {
-    label.textContent = 'Urvi'; // The bot's friendly name
+function showGreetings() {
+  // Wait 1.5 s after page load before showing the first tooltip
+  setTimeout(() => {
+    const el1 = document.getElementById('greeting-1');
+    if (el1) el1.classList.add('visible');
+
+    // Second tooltip appears 0.7 s after the first
+    setTimeout(() => {
+      const el2 = document.getElementById('greeting-2');
+      if (el2) el2.classList.add('visible');
+    }, 700);
+  }, 1500);
+}
+
+function hideAllGreetings() {
+  GREETINGS.forEach(({ id }) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('visible');
+  });
+  // Make the container invisible to screen readers too
+  if (greetingBubbles) greetingBubbles.setAttribute('aria-hidden', 'true');
+}
+
+/*
+  Wire up click handlers for each greeting bubble.
+  We do this once here rather than inline in the HTML.
+*/
+GREETINGS.forEach(({ id, text }) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // Clicking the text part: open chat + send the greeting as a user message
+  const textEl = el.querySelector('.greeting-text');
+  if (textEl) {
+    textEl.addEventListener('click', function () {
+      hideAllGreetings();
+      openChat();
+      // sendMessageText is defined in section 8 below — call it after DOM init
+      sendMessageText(text);
+    });
   }
 
-  // Assemble: put the bubble and label inside the message wrapper
+  // Clicking ✕: dismiss only this bubble, don't open the chat
+  const closeX = el.querySelector('.greeting-close');
+  if (closeX) {
+    closeX.addEventListener('click', function (event) {
+      // stopPropagation prevents the click from also triggering the text listener
+      event.stopPropagation();
+      el.classList.remove('visible');
+    });
+  }
+});
+
+
+/* ── 5. IMAGE UPLOAD ────────────────────────────────────────────── */
+/*
+  Flow:
+    1. Parent clicks paperclip → hidden <input type="file"> opens
+    2. Parent picks an image   → handleImageSelect reads it with FileReader
+    3. showImagePreview()      → thumbnail appears above the input bar
+    4. Parent clicks Send      → sendMessageText() calls addImageMessage()
+                                 to show it in the chat, then clears the preview
+
+  TODO (backend): To actually send the image to Claude Vision:
+    In sendMessageText() below, include the image in the fetch body:
+      body: JSON.stringify({ message: text, image: pendingImageDataUrl })
+    Then in index.js read req.body.image and pass it to the Claude API
+    using the "image" content block format:
+      { type: "image", source: { type: "base64", media_type: "image/jpeg",
+        data: req.body.image.split(',')[1] } }
+    (The .split(',')[1] strips the "data:image/jpeg;base64," prefix)
+*/
+
+// Holds the base64 data URL of the selected image (null = no image pending)
+let pendingImageDataUrl = null;
+
+function handleImageSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return; // User opened the picker then cancelled
+
+  // FileReader converts the image file into a base64 "data URL" string
+  // that browsers can display directly in an <img src="...">
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    pendingImageDataUrl = e.target.result; // Save the data URL
+    showImagePreview(pendingImageDataUrl);
+  };
+  reader.readAsDataURL(file); // Start reading — triggers onload when done
+}
+
+function showImagePreview(dataUrl) {
+  const thumb = document.getElementById('image-preview-thumb');
+  thumb.src = dataUrl;
+  // Adding "visible" triggers the CSS max-height transition (slides open)
+  imagePreviewBar.classList.add('visible');
+  // Mark the paperclip button so parents can see an image is attached
+  imageBtn.classList.add('has-image');
+  scrollToBottom();
+}
+
+function clearImagePreview() {
+  imagePreviewBar.classList.remove('visible');
+  imageBtn.classList.remove('has-image');
+  document.getElementById('image-preview-thumb').src = '';
+  pendingImageDataUrl = null;
+  // Reset the file input so the same file can be reselected if needed
+  imageInput.value = '';
+}
+
+/*
+  Adds the chosen image as a user bubble on the right side of the chat.
+  Called by sendMessageText() before sending the text message.
+*/
+function addImageMessage(dataUrl) {
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message', 'user');
+
+  const bubble = document.createElement('div');
+  // "image-bubble" class reduces padding so the image sits flush
+  bubble.classList.add('bubble', 'image-bubble');
+
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  img.alt = 'Image shared by parent';
+  img.classList.add('chat-image');
+
+  bubble.appendChild(img);
+
+  const label = document.createElement('div');
+  label.classList.add('message-label');
+  label.textContent = 'You';
+
   messageDiv.appendChild(bubble);
   messageDiv.appendChild(label);
-
-  // Add the completed message div to the messages area
   chatMessages.appendChild(messageDiv);
-
-  // Scroll to the bottom so the newest message is always in view
   scrollToBottom();
-
-  // Return the messageDiv in case we want to reference it later
-  return messageDiv;
 }
 
 
-/* ── 5. TYPING INDICATOR ────────────────────────────────────────── */
+/* ── 6. ADD A MESSAGE BUBBLE TO THE SCREEN ──────────────────────── */
 /*
-  While we're waiting for the backend to respond, we show three
-  animated bouncing dots so the user knows something is happening.
+  Creates a message row (wrapper + bubble + label) and appends it
+  to the messages area.
 
-  showTypingIndicator() — creates and displays the dots
-  hideTypingIndicator() — removes them
+  Parameters:
+    text   — the string to show inside the bubble
+    sender — 'bot', 'user', or 'error'
+
+  Returns the created element (used by addWelcomeMessage to attach chips).
+*/
+function addMessage(text, sender) {
+  // Record every real message in the conversation history
+  // (error messages are not recorded — they're just UI feedback)
+  if (sender !== 'error') {
+    conversationHistory.push({ role: sender, text: text });
+  }
+
+  // Outer wrapper: sets left/right alignment via CSS class
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message', sender); // e.g. class="message bot"
+
+  // Inner bubble: the coloured rounded box
+  const bubble = document.createElement('div');
+  bubble.classList.add('bubble');
+  /*
+    We use .textContent (not .innerHTML) so that any HTML characters in
+    the text are displayed as plain text — this prevents XSS injection.
+  */
+  bubble.textContent = text;
+
+  // Small label below the bubble: "You" or "Urvi"
+  const label = document.createElement('div');
+  label.classList.add('message-label');
+  label.textContent = sender === 'user' ? 'You' : 'Urvi';
+
+  messageDiv.appendChild(bubble);
+  messageDiv.appendChild(label);
+
+  // Add thumbs-up / thumbs-down buttons under every real bot reply
+  // (not for user messages, and not for error notices)
+  if (sender === 'bot') {
+    addFeedbackRow(messageDiv);
+  }
+
+  chatMessages.appendChild(messageDiv);
+
+  scrollToBottom();
+  return messageDiv; // Returned so the caller can append chips inside the bubble
+}
+
+
+/* ── 7. FEEDBACK BUTTONS (thumbs up / down) ─────────────────────── */
+/*
+  addFeedbackRow(messageDiv)
+    Appends a small 👍 👎 row to the bottom of a bot message div.
+    Clicking one button highlights it and locks both so you can only
+    rate each message once.
+
+  TODO (backend): When a parent rates a reply, send the rating to your
+    backend so you can see which answers are helpful vs. confusing.
+    Example endpoint: POST /feedback
+    Body: { rating: "up" | "down", timestamp: "2024-..." }
+    You could also include the bot's reply text so you know exactly
+    which answer was rated. See the click handler below.
+*/
+function addFeedbackRow(messageDiv) {
+  const row = document.createElement('div');
+  row.classList.add('feedback-row');
+
+  // Helper that makes one button and wires up its click logic
+  function makeFeedbackBtn(emoji, ariaLabel, ratingValue) {
+    const btn = document.createElement('button');
+    btn.classList.add('feedback-btn');
+    btn.setAttribute('aria-label', ariaLabel);
+    btn.textContent = emoji;
+
+    btn.addEventListener('click', function () {
+      // Disable BOTH buttons so the parent can only rate once
+      row.querySelectorAll('.feedback-btn').forEach(function (b) {
+        b.disabled = true;
+        b.classList.remove('selected');
+      });
+      // Highlight the button that was clicked
+      btn.classList.add('selected');
+
+      // TODO (backend): Replace the console.log below with a real fetch:
+      //   fetch('http://localhost:3000/feedback', {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({
+      //       rating: ratingValue,                   // "up" or "down"
+      //       timestamp: new Date().toISOString(),
+      //     })
+      //   });
+      console.log('Feedback received:', ratingValue); // Remove once backend is wired up
+    });
+
+    return btn;
+  }
+
+  row.appendChild(makeFeedbackBtn('👍', 'Mark as helpful',     'up'));
+  row.appendChild(makeFeedbackBtn('👎', 'Mark as not helpful', 'down'));
+  messageDiv.appendChild(row);
+}
+
+
+/* ── 8. WELCOME MESSAGE + QUICK-REPLY CHIPS ─────────────────────── */
+/*
+  The very first thing the user sees when the chat opens.
+  Below the welcome text we add four chip buttons so the user can
+  tap a common topic instantly instead of typing it.
 */
 
-let typingIndicatorEl = null; // Will hold a reference to the indicator element
+const WELCOME_TEXT =
+  "Hi there! 👋 I'm here to help with anything about Urvi Montessori — " +
+  "admissions, fees, timings, or our programs. What would you like to know?";
+
+// Four common topics — clicking one sends it as a message
+const QUICK_REPLIES = ['Admissions', 'Fees', 'Timings', 'Visit the school'];
+
+function addWelcomeMessage() {
+  // Build the message row manually so we can inject chips inside the bubble
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message', 'bot');
+
+  const bubble = document.createElement('div');
+  bubble.classList.add('bubble');
+  bubble.textContent = WELCOME_TEXT;
+
+  // Chip row below the welcome text
+  const chipsRow = document.createElement('div');
+  chipsRow.classList.add('quick-reply-chips');
+
+  QUICK_REPLIES.forEach(function (label) {
+    const chip = document.createElement('button');
+    chip.classList.add('chip');
+    chip.textContent = label;
+
+    chip.addEventListener('click', function () {
+      // Remove ALL chips so they can only be used once and don't clutter history
+      chipsRow.remove();
+      // Send the chip label as the user's message
+      sendMessageText(label);
+    });
+
+    chipsRow.appendChild(chip);
+  });
+
+  // Append chips INSIDE the bubble (visually below the welcome text)
+  bubble.appendChild(chipsRow);
+
+  const labelEl = document.createElement('div');
+  labelEl.classList.add('message-label');
+  labelEl.textContent = 'Urvi';
+
+  messageDiv.appendChild(bubble);
+  messageDiv.appendChild(labelEl);
+  chatMessages.appendChild(messageDiv);
+
+  // Record the welcome text in conversation history
+  conversationHistory.push({ role: 'bot', text: WELCOME_TEXT });
+
+  scrollToBottom();
+}
+
+
+/* ── 7. TYPING INDICATOR ────────────────────────────────────────── */
+/*
+  While we wait for the backend to reply, show three animated bouncing
+  dots so the user knows something is happening.
+*/
+
+// We keep a reference so hideTypingIndicator can find and remove it
+let typingIndicatorEl = null;
 
 function showTypingIndicator() {
-  // Build the indicator: a wrapper div with three <span> dots inside
   const wrapper = document.createElement('div');
-  wrapper.classList.add('message', 'bot'); // Same layout as a bot message
-  wrapper.id = 'typing-wrapper';           // Give it an id so we can find and remove it
+  wrapper.classList.add('message', 'bot');
+  wrapper.id = 'typing-wrapper';
 
   const indicator = document.createElement('div');
   indicator.classList.add('typing-indicator');
+  indicator.setAttribute('aria-label', 'Urvi is typing');
 
-  // Create three dots
+  // Three dot spans — CSS animates each with a staggered delay
   for (let i = 0; i < 3; i++) {
-    const dot = document.createElement('span');
-    indicator.appendChild(dot);
+    indicator.appendChild(document.createElement('span'));
   }
 
   wrapper.appendChild(indicator);
   chatMessages.appendChild(wrapper);
-
-  typingIndicatorEl = wrapper; // Save the reference so hideTypingIndicator can remove it
+  typingIndicatorEl = wrapper;
   scrollToBottom();
 }
 
 function hideTypingIndicator() {
-  // If the indicator exists in the DOM, remove it
   if (typingIndicatorEl) {
     typingIndicatorEl.remove();
-    typingIndicatorEl = null; // Clear the reference
+    typingIndicatorEl = null;
   }
 }
 
 
-/* ── 6. SEND MESSAGE TO THE BACKEND ────────────────────────────── */
+/* ── 8. SEND A MESSAGE ──────────────────────────────────────────── */
 /*
-  sendMessage() is the main function that:
-    a) Reads the user's text from the input field
-    b) Displays it as a user message bubble
-    c) Shows the typing indicator
-    d) Sends the text to our Node.js backend using fetch()
-    e) When the reply arrives, hides the indicator and shows the bot reply
-    f) If something goes wrong (e.g. backend is off), shows an error message
+  sendMessageText(text)
+    The core sending function. Takes a string, adds it as a user bubble,
+    shows the typing indicator, calls the backend, then shows the reply.
 
-  fetch() is a built-in browser function for making HTTP requests.
-  It is "asynchronous" — it doesn't freeze the page while waiting for
-  the server to respond. We use async/await to write it in a readable way.
+  sendMessage()
+    Called by the send button and Enter key. Just reads the input field
+    and passes the value to sendMessageText().
 */
 
-// "let isSending" prevents the user from firing multiple requests at once
+// Prevents firing multiple requests at the same time
 let isSending = false;
 
 /*
   conversation holds the running back-and-forth so the backend can give
   context-aware replies. Each entry is { role: 'user'|'assistant', content }.
-  We send this array with every request and append the bot's reply to it.
 */
 const conversation = [];
 
-async function sendMessage() {
-  // Read the text from the input and remove extra spaces from the ends
-  const text = userInput.value.trim();
-
-  // Don't send if the input is empty or we're already waiting for a reply
+async function sendMessageText(text) {
+  // Nothing to send, or already waiting for a reply
   if (!text || isSending) return;
 
-  // Lock: prevent sending another message while this one is in flight
   isSending = true;
-  sendBtn.disabled = true; // Gray out the send button visually
+  sendBtn.disabled = true;  // Gray out the send button visually
+  userInput.value = '';     // Clear the input field
 
-  // Clear the input field so it's ready for the next message
-  userInput.value = '';
+  // If a parent attached an image, show it in the chat first, then clear the preview
+  if (pendingImageDataUrl) {
+    addImageMessage(pendingImageDataUrl);
+    clearImagePreview();
+  }
 
-  // Show the user's message on the right side of the chat
+  // Show the user's message on the right
   addMessage(text, 'user');
 
-  // Show the three-dot typing animation while we wait for the backend
+  // Show the three-dot animation while we wait
   showTypingIndicator();
 
-  // ── FETCH REQUEST ──────────────────────────────────────────────
-  /*
-    We wrap everything in try/catch.
-    "try" runs the network request.
-    "catch" handles any errors (e.g. the server is offline).
-  */
+  /* ── FETCH REQUEST ───────────────────────────────────────────────
+     fetch() sends an HTTP POST to the backend.
+     async/await makes the asynchronous call readable (no callback nesting).
+     try/catch handles network errors gracefully.
+  ─────────────────────────────────────────────────────────────────── */
   try {
-    /*
-      fetch() sends an HTTP POST request to the backend.
-      - method: 'POST'      → tells the server we're sending data
-      - headers             → tells the server the body is JSON
-      - body                → the actual data, converted to a JSON string
-    */
     const response = await fetch('http://localhost:3000/chat', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',  // "I'm sending you JSON"
+        'Content-Type': 'application/json', // "I'm sending JSON"
       },
-      // Send the new message plus the conversation so far (for memory)
+// Send the new message plus the conversation so far (for memory)
       body: JSON.stringify({ message: text, history: conversation }),
     });
 
-    /*
-      response.ok is true if the server replied with a 200–299 status code.
-      If it's false (e.g. 500 Internal Server Error), we throw an error
-      so the catch block handles it.
-    */
+    // response.ok is true for status codes 200–299
     if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
+      throw new Error(`Server responded with status ${response.status}`);
     }
 
-    /*
-      response.json() reads the response body and parses it from a JSON string
-      back into a JavaScript object.
-      The backend sends: { "reply": "some text here" }
-      So data.reply gives us that text.
-    */
+    // Parse the JSON response — backend sends { "reply": "..." }
     const data = await response.json();
-    const botReply = data.reply;
 
-    // Remove the typing indicator now that we have the real answer
     hideTypingIndicator();
-
-    // Display the bot's reply on the left side of the chat
-    addMessage(botReply, 'bot');
+    addMessage(data.reply, 'bot');
 
     // Record this exchange so the next request includes it as context
     conversation.push({ role: 'user', content: text });
-    conversation.push({ role: 'assistant', content: botReply });
+    conversation.push({ role: 'assistant', content: data.reply });
 
   } catch (error) {
-    /*
-      Something went wrong — network is down, backend is not running,
-      or the server returned an error status. Show a friendly message.
-    */
-    console.error('Chat error:', error); // Log the technical error for debugging
-
+    // Network down, backend not running, or a 5xx error
+    console.error('Chat error:', error);
     hideTypingIndicator();
-
-    // Show the error as a special error-styled message bubble
     addMessage(
-      "Sorry, I couldn't connect to the server right now. " +
-      "Please make sure the backend is running and try again.",
+      "Sorry, I couldn't reach the server right now. " +
+      "Please make sure the backend is running (node index.js) and try again.",
       'error'
     );
   } finally {
-    /*
-      "finally" runs whether the request succeeded OR failed.
-      Unlock so the user can send another message.
-    */
+    // "finally" runs whether the request succeeded or failed
     isSending = false;
     sendBtn.disabled = false;
-    userInput.focus(); // Return focus to the input field for convenience
+    userInput.focus(); // Return focus to the input for the next message
+  }
+}
+
+function sendMessage() {
+  const text = userInput.value.trim(); // .trim() removes leading/trailing spaces
+  sendMessageText(text);
+}
+
+
+/* ── 11. TALK TO MONTESSORI MENTOR ─────────────────────────────── */
+/*
+  When a parent clicks "Talk to a Montessori Mentor", we immediately
+  show them a warm, reassuring message so they know help is coming.
+
+  TODO (backend): After showing the message, also send a notification
+    to your backend so staff know to follow up with this parent.
+    Example:
+      fetch('http://localhost:3000/mentor-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation: conversationHistory,   // Full context for the teacher
+          timestamp: new Date().toISOString(),
+        })
+      });
+    In index.js, create a POST /mentor-request route that logs this
+    to a file, sends an email/Slack alert, or stores it in a database
+    so a real teacher can see it and reach out to the parent.
+*/
+function handleMentorRequest() {
+  const warmMessage =
+    "Of course! 🌸 A real teacher or staff member from Urvi Montessori " +
+    "will personally reach out to you very soon. " +
+    "Please feel free to keep asking questions here in the meantime — " +
+    "we're always happy to help!";
+
+  addMessage(warmMessage, 'bot');
+
+  // Change the button to a confirmation state so parents can't click it twice
+  if (mentorBtn) {
+    mentorBtn.disabled = true;
+    mentorBtn.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" ' +
+      'viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" ' +
+      'aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>' +
+      ' Request sent!';
   }
 }
 
 
-/* ── 7. SCROLL TO BOTTOM ────────────────────────────────────────── */
+/* ── 12. SCROLL TO BOTTOM ───────────────────────────────────────── */
 /*
-  scrollTop controls how far the container is scrolled.
-  Setting it to scrollHeight (the full height of all content)
-  scrolls all the way to the bottom — so the newest message is visible.
+  Sets the scroll position to the very bottom of the messages container
+  so the newest message is always in view.
 */
 function scrollToBottom() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 
-/* ── 8. EVENT LISTENERS ─────────────────────────────────────────── */
+/* ── 10. INITIALISE ─────────────────────────────────────────────── */
 /*
-  Event listeners tell the browser: "when THIS thing happens,
-  call THAT function."
-
-  We attach them all here at the bottom so the functions above
-  are already defined by the time we reference them.
+  Wait until the full HTML document is parsed before running setup.
+  This guarantees all elements exist when we try to reference them.
 */
+document.addEventListener('DOMContentLoaded', function () {
 
-// Clicking the round bubble button opens or closes the chat
-chatBubble.addEventListener('click', toggleChat);
+  // Show the welcome message + quick-reply chips in the message area
+  addWelcomeMessage();
 
-// Clicking the X button inside the header closes the chat
-closeBtn.addEventListener('click', closeChat);
+  // After 1.5 s, pop up the two greeting tooltip bubbles
+  showGreetings();
 
-// Clicking the send (arrow) button sends the message
-sendBtn.addEventListener('click', sendMessage);
+  /* ── EVENT LISTENERS ──────────────────────────────────────────── */
 
-/*
-  Listen for keypresses inside the input field.
-  If the user presses "Enter" (and NOT Shift+Enter), send the message.
-  Shift+Enter would normally be used for a new line, but since this is
-  a single-line input, we just send on plain Enter.
-*/
-userInput.addEventListener('keydown', function (event) {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault(); // Stop the default browser behavior (e.g. form submit)
-    sendMessage();
+  // Floating bubble button → toggle the chat open/closed
+  chatBubble.addEventListener('click', toggleChat);
+
+  // X button inside the header → close the chat
+  closeBtn.addEventListener('click', closeChat);
+
+  // Send button (arrow) → send the typed message
+  sendBtn.addEventListener('click', sendMessage);
+
+  // Enter key inside the input → send the message
+  userInput.addEventListener('keydown', function (event) {
+    // Shift+Enter is a common shortcut for newlines — we ignore it here
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault(); // Prevent any default form-submit behaviour
+      sendMessage();
+    }
+  });
+
+  // Click anywhere OUTSIDE the chat window and outside the bubble → close
+  document.addEventListener('click', function (event) {
+    const outsideWindow    = !chatWindow.contains(event.target);
+    const outsideBubble    = !chatBubble.contains(event.target);
+    const outsideGreetings = !greetingBubbles.contains(event.target);
+
+    if (isOpen && outsideWindow && outsideBubble && outsideGreetings) {
+      closeChat();
+    }
+  });
+
+  /* ── NEW: image upload listeners ──────────────────────────────── */
+
+  // Paperclip button click → open the hidden file picker
+  if (imageBtn) {
+    imageBtn.addEventListener('click', function () {
+      imageInput.click(); // Programmatically opens the OS file picker
+    });
   }
-});
 
-/*
-  Close the chat if the user clicks anywhere OUTSIDE the chat window
-  and outside the bubble button.
-  This is optional but a nice UX touch.
-*/
-document.addEventListener('click', function (event) {
-  // event.target is the element that was actually clicked
-  const clickedOutsideWindow = !chatWindow.contains(event.target);
-  const clickedOutsideBubble = !chatBubble.contains(event.target);
-
-  if (isOpen && clickedOutsideWindow && clickedOutsideBubble) {
-    closeChat();
+  // File picker change → parent selected (or deselected) a file
+  if (imageInput) {
+    imageInput.addEventListener('change', handleImageSelect);
   }
+
+  // ✕ button in the preview strip → clear the selected image
+  if (imageRemoveBtn) {
+    imageRemoveBtn.addEventListener('click', clearImagePreview);
+  }
+
+  /* ── NEW: mentor button listener ──────────────────────────────── */
+
+  if (mentorBtn) {
+    mentorBtn.addEventListener('click', handleMentorRequest);
+  }
+
 });

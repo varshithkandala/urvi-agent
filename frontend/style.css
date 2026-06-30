@@ -3,29 +3,43 @@
   URVI MONTESSORI CHAT WIDGET — STYLESHEET
   ═══════════════════════════════════════════════════════════════════
 
-  COLOR PALETTE (Montessori-inspired — warm, earthy, calm):
-    Terracotta (primary):  #C97B4A  — used for buttons, header, bubble
-    Dark terracotta:       #A8612F  — used for hover states
-    Cream (background):    #FAF7F0  — used for the chat window bg
-    Light sand:            #F0EAE0  — used for user message bubbles
-    Warm white:            #FFFFFF  — used for bot message bubbles
-    Text dark:             #3D2B1F  — almost-black warm brown for readability
-    Text medium:           #7A5C44  — secondary text, subtitles, timestamps
-    Border:                #E8DDD0  — soft borders that don't clash
+  BRAND COLORS (from the Urvi Montessori logo):
+    Primary blue  #1C69C3  — header, user bubbles, send button
+    Sky blue      #61B5F5  — chip borders, typing dots, accents
+    Green         #8BC53F  — "online" status dot
+    Yellow        #F5A623  — can be used for chip highlights
+    Cream         #FBF8F2  — chat window background
+    White         #FFFFFF  — bot message bubbles
+    Dark text     #1A2A3A  — main readable text
+    Mid text      #5A7088  — subtitles, labels, placeholder
+    Border        #D6E8F7  — soft blue-tinted borders
 
-  APPROACH:
-    - No corporate blue, no neon, no childish cartoons
-    - Generous spacing, rounded corners, soft shadows
-    - Mobile-first: the widget looks great on phones AND desktops
+  FILE STRUCTURE:
+    1.  Global reset
+    2.  Keyframe animations
+    3.  prefers-reduced-motion overrides
+    4.  Floating bubble button (+ pulsing ring)
+    5.  Greeting bubbles
+    6.  Chat window
+    7.  Header bar
+    8.  Messages area + message bubbles
+    9.  Quick-reply chips
+    10. Typing indicator
+    11. Error bubble
+    12. Input bar (+ image attach button)
+    13. Image preview bar + image bubble
+    14. Feedback buttons (thumbs up / down)
+    15. Footer (+ mentor button)
+    16. Mobile responsive
   ═══════════════════════════════════════════════════════════════════
 */
 
 
-/* ── GLOBAL RESET ───────────────────────────────────────────────── */
+/* ══ 1. GLOBAL RESET ════════════════════════════════════════════════ */
 /*
-  Remove default browser spacing and make box-sizing consistent.
-  "border-box" means padding is INCLUDED in an element's width/height
-  calculation — much easier to reason about layouts.
+  Remove default browser margins/padding.
+  "border-box" means padding is INCLUDED in width/height — easier to
+  reason about layout without surprises.
 */
 *, *::before, *::after {
   margin: 0;
@@ -36,18 +50,81 @@
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 15px;
-  color: #3D2B1F;
-  /* The body itself is transparent so the widget floats over the host page */
+  color: #1A2A3A;
+  /* Transparent so the widget floats over whatever page hosts it */
   background: transparent;
 }
 
 
-/* ── THE FLOATING BUBBLE BUTTON ─────────────────────────────────── */
+/* ══ 2. KEYFRAME ANIMATIONS ═════════════════════════════════════════ */
+
+/* Gentle up-and-down float for the bubble button */
+@keyframes float {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-7px); }
+}
+
+/* Expanding ring that grows outward and fades — attention-grabber */
+@keyframes ring-pulse {
+  0%   { transform: scale(1);    opacity: 0.65; }
+  70%  { transform: scale(1.55); opacity: 0;    }
+  100% { transform: scale(1.55); opacity: 0;    }
+}
+
+/* Greeting bubble slides in from the right */
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+/* Individual message fades + lifts into view */
+@keyframes msg-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Bouncing dots for the typing indicator */
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
+  40%            { transform: translateY(-6px); opacity: 1;   }
+}
+
+/* Green online dot — gentle pulse */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1;   transform: scale(1);    }
+  50%       { opacity: 0.6; transform: scale(1.3);  }
+}
+
+
+/* ══ 3. RESPECT prefers-reduced-motion ══════════════════════════════ */
 /*
-  "position: fixed" anchors it to the viewport (screen) — it stays
-  in the corner even when the page scrolls.
-  bottom/right push it 24px from the edges.
-  z-index: 9999 keeps it above all other page content.
+  Some users set their OS to reduce motion (e.g. vestibular disorders).
+  We turn off all decorative animations and keep only instant or
+  simple opacity transitions so the UI stays functional.
+*/
+@media (prefers-reduced-motion: reduce) {
+  #chat-bubble,
+  #chat-bubble::before,
+  .greeting-bubble,
+  .status-dot,
+  .typing-indicator span,
+  .image-preview-bar,
+  .feedback-btn {
+    animation: none !important;
+    transition: none !important;
+  }
+  .chat-window {
+    transition: opacity 0.12s ease !important;
+  }
+}
+
+
+/* ══ 4. FLOATING BUBBLE BUTTON ══════════════════════════════════════ */
+/*
+  "position: fixed" anchors it to the viewport — it stays in the corner
+  even when the page scrolls.
+  The float animation gently bobs it up/down to invite a click.
+  The ::before ring pulses outward to draw attention.
 */
 #chat-bubble {
   position: fixed;
@@ -55,258 +132,414 @@ body {
   right: 24px;
   z-index: 9999;
 
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;          /* Makes it a perfect circle */
-  background-color: #C97B4A;   /* Terracotta */
-  color: #fff;
-  border: none;
+  /* Circle sizing */
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  overflow: hidden;       /* Clips the logo to the circle */
+  padding: 0;
   cursor: pointer;
 
-  /* Center the icon inside the circle */
+  /* Brand-colored glow shadow */
+  box-shadow:
+    0 4px 18px rgba(28, 105, 195, 0.38),
+    0 2px 6px  rgba(28, 105, 195, 0.22);
+
+  /* Center both the logo img and the X icon */
   display: flex;
   align-items: center;
   justify-content: center;
 
-  /* Smooth shadow for depth */
-  box-shadow: 0 4px 16px rgba(201, 123, 74, 0.40);
+  background: #fff;
 
-  /* Smooth animation when hovered */
-  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  /* Smooth hover transitions */
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+
+  /* Floating up-and-down animation */
+  animation: float 3.4s ease-in-out infinite;
 }
 
-/* Slightly darker + a small "pop" scale effect on hover */
+/* Pulsing ring drawn with a pseudo-element — no extra HTML needed */
+#chat-bubble::before {
+  content: '';
+  position: absolute;
+  inset: -7px;             /* Extends 7px outside the button edges */
+  border-radius: 50%;
+  border: 2.5px solid rgba(28, 105, 195, 0.50);
+  animation: ring-pulse 2.6s ease-out infinite;
+  pointer-events: none;    /* Clicks pass through to the button */
+}
+
+/* While the chat is open, stop the float + ring (user's attention is elsewhere) */
+#chat-bubble.is-open {
+  animation: none;
+}
+#chat-bubble.is-open::before {
+  animation: none;
+  opacity: 0;
+}
+
 #chat-bubble:hover {
-  background-color: #A8612F;
-  transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(201, 123, 74, 0.50);
+  transform: scale(1.09);
+  box-shadow: 0 6px 24px rgba(28, 105, 195, 0.48);
+  animation-play-state: paused; /* Pause float on hover — cleaner feel */
 }
 
-/* Pressed state — button sinks in slightly */
 #chat-bubble:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
+}
+
+/* Logo image fills the entire circle */
+#bubble-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* X close icon inside the button */
+#bubble-icon-close {
+  color: #1C69C3;
+  position: absolute;
+  /* Hidden by default; script.js toggles display */
 }
 
 
-/* ── THE CHAT WINDOW ────────────────────────────────────────────── */
+/* ══ 5. GREETING BUBBLES ════════════════════════════════════════════ */
 /*
-  Also fixed to the viewport, just above the bubble.
-  Hidden by default — script.js removes the "hidden" class to show it.
+  A container holding two small speech-bubble tooltips above the chat
+  button. Each bubble is invisible by default (opacity: 0) and becomes
+  visible when script.js adds the "visible" class.
 */
-.chat-window {
+
+.greeting-bubbles {
   position: fixed;
-  bottom: 96px;     /* Sits above the bubble (58px bubble + 14px gap + 24px from edge) */
+  bottom: 104px;   /* Sits just above the 64px button + gap */
   right: 24px;
   z-index: 9998;
 
-  width: 360px;
-  height: 520px;
-
-  background-color: #FAF7F0;   /* Cream */
-  border-radius: 18px;
-  border: 1px solid #E8DDD0;
-
-  /* Column layout: header on top, messages in middle, input at bottom */
+  /* Stack bubbles vertically, aligned to the right */
   display: flex;
   flex-direction: column;
-  overflow: hidden;             /* Clips child content to the rounded corners */
+  align-items: flex-end;
+  gap: 8px;
+}
 
-  /* Layered shadow for a floating card effect */
+.greeting-bubble {
+  /* Start invisible — script.js adds .visible to animate in */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(16px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+
+  background: #fff;
+  border: 1.5px solid #D6E8F7;
+  /* Speech-bubble tail points toward the bottom-right (the chat button) */
+  border-radius: 16px 16px 4px 16px;
+  padding: 10px 12px 10px 14px;
+  max-width: 230px;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  box-shadow: 0 4px 16px rgba(28, 105, 195, 0.14);
+}
+
+/* When script.js adds this class, the bubble slides in */
+.greeting-bubble.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.greeting-text {
+  font-size: 13.5px;
+  color: #1A2A3A;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.greeting-bubble:hover .greeting-text {
+  color: #1C69C3;
+}
+
+/* Small ✕ dismiss button */
+.greeting-close {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #5A7088;
+  cursor: pointer;
+  padding: 2px 2px 2px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.greeting-close:hover {
+  color: #1C69C3;
+  background: #EFF7FF;
+}
+
+
+/* ══ 6. CHAT WINDOW ═════════════════════════════════════════════════ */
+/*
+  Fixed above the bubble button.
+  Hidden = opacity 0 + scaled down. Visible = opacity 1 + full scale.
+  The opening transition uses a "bouncy" cubic-bezier (slight overshoot).
+  The closing transition is a smooth ease (no overshoot).
+*/
+.chat-window {
+  position: fixed;
+  bottom: 104px;
+  right: 24px;
+  z-index: 9998;
+
+  width: 370px;
+  height: 545px;
+
+  background-color: #FBF8F2;
+  border-radius: 20px;
+  border: 1px solid #D6E8F7;
+  overflow: hidden;  /* Clips children to rounded corners */
+
+  /* Column layout: header on top, messages in middle, input/footer at bottom */
+  display: flex;
+  flex-direction: column;
+
   box-shadow:
-    0 8px 32px rgba(61, 43, 31, 0.14),
-    0 2px 8px  rgba(61, 43, 31, 0.08);
+    0 12px 40px rgba(28, 105, 195, 0.16),
+    0 3px  10px rgba(28, 105, 195, 0.10);
 
-  /* Smooth slide-up + fade-in when appearing */
+  /* OPEN state (default / target when .hidden is removed) */
   transform-origin: bottom right;
-  transition: opacity 0.25s ease, transform 0.25s ease;
   opacity: 1;
   transform: scale(1) translateY(0);
+
+  /*
+    Opening transition: bouncy cubic-bezier creates the "spring/pop" feel.
+    The values (0.34, 1.56, 0.64, 1) allow a slight overshoot past 1
+    before settling — that's the "bounce".
+  */
+  transition:
+    opacity  0.30s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.30s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/*
-  The "hidden" class is toggled by script.js.
-  We scale it down slightly and fade it out for a smooth close animation.
-*/
+/* HIDDEN / CLOSED state — fades down and shrinks toward the button */
 .chat-window.hidden {
   opacity: 0;
-  transform: scale(0.94) translateY(12px);
-  pointer-events: none;   /* Prevent clicks when invisible */
+  transform: scale(0.88) translateY(14px);
+  pointer-events: none;
+
+  /* Closing transition: simple ease (no bounce — just a smooth fade) */
+  transition:
+    opacity  0.20s ease,
+    transform 0.20s ease;
 }
 
 
-/* ── HEADER BAR ─────────────────────────────────────────────────── */
+/* ══ 7. HEADER BAR ══════════════════════════════════════════════════ */
 .chat-header {
-  background-color: #C97B4A;
+  /* Gradient from primary blue to a slightly lighter shade */
+  background: linear-gradient(135deg, #1C69C3 0%, #2576D8 100%);
   color: #fff;
-  padding: 14px 16px;
+  padding: 13px 16px;
 
-  /* Space the info (left) and close button (right) */
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;          /* Never shrink — always full height */
 
-  /* Fixed height — won't shrink */
-  flex-shrink: 0;
+  border-bottom: 1px solid rgba(97, 181, 245, 0.28);
 }
 
-/* Groups the green dot + school name together */
 .chat-header-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
 }
 
-/* The small pulsing "online" dot */
-.status-dot {
-  width: 10px;
-  height: 10px;
-  background-color: #7CCC8E;   /* Soft green — "online" */
+/* Small circular logo in the header */
+.header-logo {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.6);
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.52);
   flex-shrink: 0;
-
-  /* Subtle pulse animation to suggest the bot is live */
-  animation: pulse 2.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.7; transform: scale(1.15); }
 }
 
 .chat-title {
   font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .chat-subtitle {
   font-size: 12px;
-  opacity: 0.85;
-  margin-top: 1px;
+  opacity: 0.88;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-/* The X close button inside the header */
+/* Green "online" dot — animated pulse */
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background-color: #8BC53F;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse-dot 2.6s ease-in-out infinite;
+}
+
+/* X close button inside the header */
 .close-btn {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.16);
   border: none;
   color: #fff;
-  font-size: 22px;
+  font-size: 21px;
   line-height: 1;
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  opacity: 0.85;
-  transition: opacity 0.15s ease;
+  padding: 4px 9px;
+  border-radius: 8px;
+  transition: background 0.18s ease;
 }
-
 .close-btn:hover {
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.30);
 }
 
 
-/* ── MESSAGES AREA ──────────────────────────────────────────────── */
+/* ══ 8. MESSAGES AREA + BUBBLES ════════════════════════════════════ */
 /*
-  "flex: 1" makes this section grow to fill all available vertical space
-  between the header and the input bar.
-  "overflow-y: auto" adds a scrollbar only when messages overflow.
+  flex: 1 makes this section grow to fill all space between the header
+  and the input bar. overflow-y: auto adds a scrollbar only when needed.
 */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 14px;
+  padding: 16px 14px 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;                  /* Space between each message */
-  scroll-behavior: smooth;    /* Smooth auto-scroll to newest message */
+  gap: 10px;
+  scroll-behavior: smooth;
 }
 
-/* Thin custom scrollbar so it matches the warm color palette */
-.chat-messages::-webkit-scrollbar {
-  width: 4px;
-}
-.chat-messages::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Thin, brand-colored custom scrollbar */
+.chat-messages::-webkit-scrollbar       { width: 4px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #D9C9B8;
+  background: #B8D4EE;
   border-radius: 4px;
 }
 
-
-/* ── MESSAGE BUBBLES ────────────────────────────────────────────── */
-/*
-  Both user and bot messages share this base class.
-  The wrapper div controls LEFT vs RIGHT alignment.
-  The inner .bubble div is the colored rounded box with the text.
-*/
+/* Message row wrapper */
 .message {
   display: flex;
   flex-direction: column;
-  max-width: 82%;             /* Bubbles never stretch the full width */
+  max-width: 82%;
+  animation: msg-fade-in 0.22s ease both;
 }
 
-/* Bot messages: left-aligned */
-.message.bot {
-  align-self: flex-start;
-}
+/* Bot messages sit on the left */
+.message.bot  { align-self: flex-start; }
 
-/* User messages: right-aligned */
-.message.user {
-  align-self: flex-end;
-}
+/* User messages sit on the right */
+.message.user { align-self: flex-end;   }
 
-/* The actual colored bubble */
+/* The colored speech bubble */
 .bubble {
   padding: 10px 14px;
   border-radius: 18px;
-  line-height: 1.5;
+  line-height: 1.55;
   font-size: 14px;
-  word-break: break-word;     /* Prevents long words from overflowing */
+  word-break: break-word;   /* Prevents long words from overflowing */
 }
 
-/* Bot bubble: warm white with a subtle border */
+/* Bot bubble: white with a light blue border, tail on the left */
 .message.bot .bubble {
   background-color: #FFFFFF;
-  color: #3D2B1F;
-  border: 1px solid #E8DDD0;
-  border-bottom-left-radius: 5px;  /* "Tail" direction for bot messages */
+  color: #1A2A3A;
+  border: 1px solid #D6E8F7;
+  border-bottom-left-radius: 4px;
 }
 
-/* User bubble: sand/terracotta-tinted */
+/* User bubble: primary blue, tail on the right */
 .message.user .bubble {
-  background-color: #C97B4A;
+  background-color: #1C69C3;
   color: #fff;
-  border-bottom-right-radius: 5px; /* "Tail" direction for user messages */
+  border-bottom-right-radius: 4px;
 }
 
-/* Small label below each bubble: "You" or "Urvi" */
+/* Small "You" / "Urvi" label beneath each bubble */
 .message-label {
   font-size: 11px;
-  color: #7A5C44;
+  color: #7A90A8;
   margin-top: 3px;
   padding: 0 4px;
 }
+.message.user .message-label { text-align: right; }
 
-.message.user .message-label {
-  text-align: right;
+
+/* ══ 9. QUICK-REPLY CHIPS ═══════════════════════════════════════════ */
+/*
+  A row of small tappable buttons shown under the welcome message.
+  Clicking one sends it as a question without typing anything.
+*/
+.quick-reply-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.chip {
+  padding: 6px 13px;
+  border-radius: 20px;
+  border: 1.5px solid #61B5F5;
+  background: #EFF7FF;
+  color: #1C69C3;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, transform 0.15s, border-color 0.18s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.chip:hover {
+  background: #1C69C3;
+  border-color: #1C69C3;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.chip:active {
+  transform: translateY(0);
 }
 
 
-/* ── TYPING INDICATOR ───────────────────────────────────────────── */
+/* ══ 10. TYPING INDICATOR ══════════════════════════════════════════ */
 /*
-  Three bouncing dots that appear while waiting for the bot reply.
-  Each dot is slightly delayed to create the wave effect.
+  Three bouncing dots shown while we're waiting for the backend reply.
+  Each dot has a slightly different animation-delay to create a wave.
 */
 .typing-indicator {
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 12px 16px;
-  background: #FFFFFF;
-  border: 1px solid #E8DDD0;
+  background: #fff;
+  border: 1px solid #D6E8F7;
   border-radius: 18px;
-  border-bottom-left-radius: 5px;
+  border-bottom-left-radius: 4px;
   width: fit-content;
 }
 
@@ -314,128 +547,342 @@ body {
   display: block;
   width: 7px;
   height: 7px;
-  background-color: #C97B4A;
+  background-color: #61B5F5;
   border-radius: 50%;
-  animation: bounce 1.2s infinite ease-in-out;
+  animation: dot-bounce 1.2s infinite ease-in-out;
 }
 
-/* Stagger the bounce timing for each dot */
 .typing-indicator span:nth-child(1) { animation-delay: 0s;    }
 .typing-indicator span:nth-child(2) { animation-delay: 0.18s; }
 .typing-indicator span:nth-child(3) { animation-delay: 0.36s; }
 
-@keyframes bounce {
-  0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
-  40%            { transform: translateY(-6px); opacity: 1;   }
-}
 
-
-/* ── ERROR MESSAGE ──────────────────────────────────────────────── */
-/*
-  Shown when the server can't be reached.
-  Uses a muted red/terracotta shade so it fits the palette but signals a problem.
-*/
+/* ══ 11. ERROR BUBBLE ═══════════════════════════════════════════════ */
+/* Shown when the backend can't be reached */
 .message.error .bubble {
-  background-color: #FDF0E8;
-  color: #8B3A1A;
-  border: 1px solid #E8C4A8;
+  background-color: #FFF3F0;
+  color: #B03010;
+  border: 1px solid #FAC9B8;
   font-style: italic;
 }
 
 
-/* ── INPUT BAR ──────────────────────────────────────────────────── */
-/*
-  Fixed at the bottom of the chat window.
-  "flex-shrink: 0" means it never gets squished.
-*/
+/* ══ 12. INPUT BAR ══════════════════════════════════════════════════ */
 .chat-input-area {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
-  border-top: 1px solid #E8DDD0;
-  background-color: #FAF7F0;
+  padding: 11px 14px;
+  border-top: 1px solid #D6E8F7;
+  background-color: #FBF8F2;
   flex-shrink: 0;
 }
 
-/* The text input field */
+/* Pill-shaped text input */
 .chat-input-area input {
-  flex: 1;                    /* Grows to fill all available space */
+  flex: 1;
   padding: 10px 14px;
-  border: 1px solid #D9C9B8;
-  border-radius: 22px;        /* Pill shape */
+  border: 1.5px solid #C0D8F0;
+  border-radius: 22px;
   background-color: #fff;
-  color: #3D2B1F;
+  color: #1A2A3A;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Highlight the input field when focused (clicked into) */
 .chat-input-area input:focus {
-  border-color: #C97B4A;
-  box-shadow: 0 0 0 3px rgba(201, 123, 74, 0.15);
+  border-color: #1C69C3;
+  box-shadow: 0 0 0 3px rgba(28, 105, 195, 0.12);
 }
 
-/* Placeholder text color */
 .chat-input-area input::placeholder {
-  color: #B0988A;
+  color: #90AABF;
 }
 
-/* The send button */
+/* Round send button */
 .chat-input-area button {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #C97B4A;
+  background-color: #1C69C3;
   color: #fff;
   border: none;
   cursor: pointer;
   flex-shrink: 0;
-
-  /* Center the arrow icon */
   display: flex;
   align-items: center;
   justify-content: center;
-
   transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 .chat-input-area button:hover {
-  background-color: #A8612F;
-  transform: scale(1.06);
+  background-color: #1558A8;
+  transform: scale(1.07);
 }
 
 .chat-input-area button:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 
-/* Gray out the send button while the bot is "typing" (disabled state) */
+/* Gray out the send button while waiting for a reply */
 .chat-input-area button:disabled {
-  background-color: #D9C9B8;
+  background-color: #A8C8E8;
   cursor: not-allowed;
   transform: none;
 }
 
-
-/* ── MOBILE RESPONSIVE ──────────────────────────────────────────── */
 /*
-  On small screens (phones), make the chat window full-width
-  so it's easy to read and tap.
-  "max-width: 480px" means: apply these styles on screens 480px wide or narrower.
+  IMAGE ATTACH (PAPERCLIP) BUTTON
+  The general .chat-input-area button rule above makes every button
+  in the row round and primary-blue. We override that here so the
+  paperclip stays neutral and doesn't compete with the send button.
+*/
+.image-btn {
+  background-color: transparent;
+  color: #5A7088;
+  box-shadow: none;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.image-btn:hover {
+  background-color: #EFF7FF;
+  color: #1C69C3;
+  transform: scale(1.08);
+}
+.image-btn:active {
+  background-color: #D6E8F7;
+  transform: scale(0.94);
+}
+/* Tinted blue when an image is already selected */
+.image-btn.has-image {
+  color: #1C69C3;
+  background-color: #EFF7FF;
+}
+
+
+/* ══ 13. IMAGE PREVIEW BAR + IMAGE BUBBLE ═══════════════════════ */
+
+/*
+  Slim strip above the input bar showing the chosen image thumbnail.
+  Hidden by default (max-height: 0 + overflow: hidden).
+  script.js adds ".visible" to slide it open smoothly.
+*/
+.image-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: #FBF8F2;
+  border-top: 1px solid #D6E8F7;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.28s ease, padding 0.28s ease;
+  flex-shrink: 0;
+}
+
+.image-preview-bar.visible {
+  max-height: 72px;
+  padding: 8px 14px;
+}
+
+/* Small thumbnail of the chosen image */
+.image-preview-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1.5px solid #D6E8F7;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* ✕ button to discard the image before sending */
+.image-remove-btn {
+  background: transparent;
+  border: 1px solid #D6E8F7;
+  color: #5A7088;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.image-remove-btn:hover {
+  background: #FFF0EE;
+  color: #B03010;
+  border-color: #FAC9B8;
+}
+
+/* Image displayed inside a chat bubble */
+.chat-image {
+  display: block;
+  max-width: 200px;
+  max-height: 180px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+/*
+  User bubble that contains an image.
+  Overrides the text-specific .bubble padding so the image sits flush.
+*/
+.image-bubble {
+  padding: 6px;
+}
+
+
+/* ══ 14. FEEDBACK BUTTONS (thumbs up / down) ════════════════════ */
+
+/*
+  Tiny row of 👍 / 👎 buttons shown under each real bot reply.
+  They're deliberately subtle — small, low-opacity — so they don't
+  distract from the message. One click locks both buttons.
+*/
+.feedback-row {
+  display: flex;
+  gap: 3px;
+  margin-top: 5px;
+  padding: 0 2px;
+}
+
+.feedback-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 6px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.16s, background 0.16s, border-color 0.16s, transform 0.14s;
+}
+
+.feedback-btn:hover:not(:disabled) {
+  background: #EFF7FF;
+  border-color: #D6E8F7;
+  opacity: 1;
+  transform: scale(1.18);
+}
+
+/* The button the user actually clicked — highlighted */
+.feedback-btn.selected {
+  background: #EFF7FF;
+  border-color: #61B5F5;
+  opacity: 1;
+}
+
+/* After rating, the non-selected button is greyed out */
+.feedback-btn:disabled {
+  cursor: default;
+  transform: none;
+}
+.feedback-btn:disabled:not(.selected) {
+  opacity: 0.25;
+}
+
+
+/* ══ 15. FOOTER ══════════════════════════════════════════════════ */
+/*
+  Two rows stacked vertically:
+    1. "Talk to a Montessori Mentor" button (green brand colour)
+    2. "Powered by Urvi Montessori" brand line
+*/
+.chat-footer {
+  background: #FBF8F2;
+  border-top: 1px solid #EAF2FB;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 10px;
+}
+
+/* "Talk to a Montessori Mentor" */
+.mentor-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 16px;
+  border-radius: 20px;
+  /* Green brand colour — distinct from the primary blue, signals "human" */
+  border: 1.5px solid #8BC53F;
+  background: #F4FBE8;
+  color: #3D6B18;
+  font-size: 12.5px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.15s;
+}
+.mentor-btn:hover:not(:disabled) {
+  background: #8BC53F;
+  border-color: #8BC53F;
+  color: #fff;
+  transform: translateY(-1px);
+}
+.mentor-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+/* After request is sent, the button shows a confirmation state */
+.mentor-btn:disabled {
+  border-color: #C0DFA0;
+  background: #F4FBE8;
+  color: #7AAA50;
+  cursor: default;
+}
+
+/* "Powered by Urvi Montessori" */
+.footer-brand {
+  font-size: 11px;
+  color: #90AABF;
+  letter-spacing: 0.03em;
+}
+
+
+/* ══ 16. MOBILE RESPONSIVE ══════════════════════════════════════════ */
+/*
+  On small screens (phones ≤ 480 px), the chat window goes full-screen
+  so it's easy to read and tap. The bubble moves slightly inward.
 */
 @media (max-width: 480px) {
   .chat-window {
     right: 0;
     bottom: 0;
     width: 100%;
-    height: 100%;             /* Full screen on mobile */
-    border-radius: 0;         /* No rounded corners when full screen */
+    height: 100%;
+    height: 100dvh;   /* "dvh" accounts for mobile browser toolbars */
+    border-radius: 0;
     border: none;
+    /* Simplify the open transition on mobile */
+    transition: opacity 0.22s ease;
+  }
+
+  .chat-window.hidden {
+    transform: none;
+    transition: opacity 0.18s ease;
   }
 
   #chat-bubble {
     bottom: 18px;
     right: 18px;
+  }
+
+  .greeting-bubbles {
+    right: 18px;
+    bottom: 96px;
+    /* Hide greetings on very narrow screens to avoid clutter */
+    max-width: calc(100vw - 36px);
+  }
+
+  .greeting-bubble {
+    max-width: 200px;
   }
 }
