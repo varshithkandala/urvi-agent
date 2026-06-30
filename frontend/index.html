@@ -1,81 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Basic page setup: title, character encoding, and mobile-friendliness -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Urvi Montessori Chat</title>
-
-  <!-- Link to our CSS file for all the styling -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
   <!--
-    ═══════════════════════════════════════════════════════
-    THE CHAT BUBBLE BUTTON
-    This is the small round button fixed to the bottom-right
-    corner of the screen. Clicking it opens or closes the chat.
-    ═══════════════════════════════════════════════════════
+    ══════════════════════════════════════════════════════
+    GREETING BUBBLES
+    Two small speech-bubble tooltips that float up near
+    the chat button a couple of seconds after the page loads.
+    JavaScript shows them and handles clicks on them.
+      • Clicking the text  → opens chat + sends that text
+      • Clicking ✕         → dismisses just that bubble
+    ══════════════════════════════════════════════════════
   -->
-  <button id="chat-bubble" aria-label="Open chat">
-    <!-- Chat icon (SVG drawn inline so no image file is needed) -->
-    <svg id="bubble-icon-open" xmlns="http://www.w3.org/2000/svg"
-         width="28" height="28" viewBox="0 0 24 24"
-         fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-    </svg>
+  <div id="greeting-bubbles" class="greeting-bubbles" aria-hidden="true">
 
-    <!-- Close icon (X) — hidden by default, shown when chat is open -->
-    <svg id="bubble-icon-close" xmlns="http://www.w3.org/2000/svg"
-         width="28" height="28" viewBox="0 0 24 24"
-         fill="none" stroke="currentColor" stroke-width="2.5"
-         stroke-linecap="round" stroke-linejoin="round"
-         style="display: none;">
-      <line x1="18" y1="6" x2="6" y2="18"/>
-      <line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  </button>
+    <!-- Second greeting (shown 0.7 s after the first, sits on top) -->
+    <div class="greeting-bubble" id="greeting-2">
+      <button class="greeting-close" aria-label="Dismiss">✕</button>
+      <span class="greeting-text">Ask me anything about us ✨</span>
+    </div>
+
+    <!-- First greeting (shown first, sits closest to the chat button) -->
+    <div class="greeting-bubble" id="greeting-1">
+      <button class="greeting-close" aria-label="Dismiss">✕</button>
+      <span class="greeting-text">Hello! New to Urvi? 🌱</span>
+    </div>
+
+  </div><!-- end #greeting-bubbles -->
 
 
   <!--
-    ═══════════════════════════════════════════════════════
-    THE CHAT WINDOW
-    Hidden by default. Appears when the bubble is clicked.
-    Contains: a header, the message area, and the input bar.
-    ═══════════════════════════════════════════════════════
+    ══════════════════════════════════════════════════════
+    FLOATING CHAT BUBBLE BUTTON
+    Always visible in the bottom-right corner.
+    Shows the school logo and gently floats up and down.
+    A pulsing ring (CSS ::before) draws the eye.
+    Clicking toggles the chat window open/closed.
+    ══════════════════════════════════════════════════════
+  -->
+  <button id="chat-bubble" aria-label="Open chat">
+
+    <!-- School logo fills the round button -->
+    <img src="urvi-logo.jpeg" alt="Urvi Montessori" id="bubble-logo" />
+
+    <!-- X icon — hidden normally, shown when the chat is open -->
+    <svg id="bubble-icon-close"
+         xmlns="http://www.w3.org/2000/svg"
+         width="26" height="26" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <line x1="18" y1="6"  x2="6"  y2="18" />
+      <line x1="6"  y1="6"  x2="18" y2="18" />
+    </svg>
+
+  </button><!-- end #chat-bubble -->
+
+
+  <!--
+    ══════════════════════════════════════════════════════
+    CHAT WINDOW
+    Hidden when the page loads. JavaScript removes the
+    'hidden' class to reveal it with a bounce animation.
+
+    Layout (top → bottom):
+      .chat-header     — logo, name, close button
+      .chat-messages   — scrollable conversation area
+      .chat-input-area — text field + send arrow
+      .chat-footer     — "Powered by Urvi Montessori"
+    ══════════════════════════════════════════════════════
   -->
   <div id="chat-window" class="chat-window hidden">
 
-    <!-- Top header bar with the school name and a close button -->
+    <!-- ── HEADER ─────────────────────────────────── -->
     <div class="chat-header">
       <div class="chat-header-info">
-        <!-- Small dot to suggest the bot is "online" -->
-        <span class="status-dot"></span>
+        <!-- Logo shown again inside the header for branding -->
+        <img src="urvi-logo.jpeg" alt="Urvi Montessori logo" class="header-logo" />
         <div>
           <div class="chat-title">Urvi Montessori</div>
-          <div class="chat-subtitle">Ask me anything</div>
+          <div class="chat-subtitle">
+            <!-- Green dot = "online" -->
+            <span class="status-dot" aria-hidden="true"></span>
+            We're here to help
+          </div>
         </div>
       </div>
-      <!-- X button inside the window (alternative way to close) -->
+      <!-- X button inside the header — another way to close the chat -->
       <button id="close-btn" class="close-btn" aria-label="Close chat">&times;</button>
     </div>
 
+    <!-- ── MESSAGES ────────────────────────────────── -->
     <!--
-      THE MESSAGES AREA
-      All chat messages (both user and bot) will appear here.
-      script.js adds new <div> elements inside this container.
+      All chat bubbles are created and appended here by script.js.
+      role="log" + aria-live="polite" tells screen readers to announce
+      new messages as they appear.
     -->
-    <div id="chat-messages" class="chat-messages">
-      <!-- Messages are inserted here dynamically by script.js -->
+    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
+      <!-- Populated dynamically by script.js -->
     </div>
 
-    <!--
-      THE INPUT BAR
-      Where the user types their message and hits Send (or Enter).
-    -->
+    <!-- ── IMAGE PREVIEW BAR ──────────────────────────
+         Appears above the input when a parent selects an image.
+         Hidden by default (max-height: 0 in CSS).
+         script.js adds the "visible" class to slide it open.
+    ─────────────────────────────────────────────────── -->
+    <div id="image-preview-bar" class="image-preview-bar">
+      <img id="image-preview-thumb" class="image-preview-thumb"
+           alt="Preview of selected image" />
+      <!-- ✕ clears the image selection without sending -->
+      <button id="image-remove-btn" class="image-remove-btn"
+              type="button" aria-label="Remove selected image">✕</button>
+    </div>
+
+    <!-- ── INPUT BAR ───────────────────────────────── -->
     <div class="chat-input-area">
+
+      <!-- Hidden file picker — the paperclip button below opens it -->
+      <input type="file" id="image-input" accept="image/*"
+             style="display:none" aria-label="Choose an image to attach" />
+
+      <!--
+        PAPERCLIP / IMAGE ATTACH BUTTON
+        Clicking it triggers the hidden file input above.
+        TODO (backend): The image is currently shown only in the chat UI
+        (as a local preview). To send it to Claude Vision you need to:
+          1. Read the file as base64 in script.js (already done via FileReader)
+          2. Include it in the fetch body:
+               body: JSON.stringify({ message: text, image: base64DataUrl })
+          3. In index.js, pass the image to the Claude API using the
+             "image" content block:
+               { type: "image", source: { type: "base64",
+                 media_type: "image/jpeg", data: "..." } }
+      -->
+      <button id="image-btn" class="image-btn" type="button"
+              aria-label="Attach an image">
+        <!-- Paperclip icon (Feather-icons style SVG) -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </button>
+
       <input
         type="text"
         id="user-input"
@@ -83,19 +157,50 @@
         autocomplete="off"
         aria-label="Type your message"
       />
+      <!-- Paper-plane send button -->
       <button id="send-btn" aria-label="Send message">
-        <!-- Paper-plane send icon -->
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-             viewBox="0 0 24 24" fill="currentColor">
+             viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
       </button>
     </div>
 
+    <!-- ── FOOTER ──────────────────────────────────── -->
+    <!--
+      Two rows:
+        1. "Talk to a Montessori Mentor" button
+        2. "Powered by Urvi Montessori" brand line
+    -->
+    <div class="chat-footer">
+
+      <!--
+        TALK TO MENTOR BUTTON
+        Clicking shows a warm reassurance message in the chat.
+        TODO (backend): Send a POST /mentor-request to your backend so
+        staff can see which parent clicked this and what they were asking.
+        Include conversationHistory in the request body so the teacher
+        has full context before reaching out.
+      -->
+      <button id="mentor-btn" class="mentor-btn" type="button">
+        <!-- Person / teacher icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Talk to a Montessori Mentor
+      </button>
+
+      <div class="footer-brand">Powered by Urvi Montessori</div>
+    </div>
+
   </div><!-- end #chat-window -->
 
 
-  <!-- Link to our JavaScript file — placed at the bottom so HTML loads first -->
+  <!-- Script is at the bottom so all HTML elements exist before JS runs -->
   <script src="script.js"></script>
 </body>
 </html>
