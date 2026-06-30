@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Basic page setup: title, character encoding, and mobile-friendliness -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urvi Montessori Chat</title>
+
+  <!-- Link to our CSS file for all the styling -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!--
+    ═══════════════════════════════════════════════════════
+    THE CHAT BUBBLE BUTTON
+    This is the small round button fixed to the bottom-right
+    corner of the screen. Clicking it opens or closes the chat.
+    ═══════════════════════════════════════════════════════
+  -->
+  <button id="chat-bubble" aria-label="Open chat">
+    <!-- Chat icon (SVG drawn inline so no image file is needed) -->
+    <svg id="bubble-icon-open" xmlns="http://www.w3.org/2000/svg"
+         width="28" height="28" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+
+    <!-- Close icon (X) — hidden by default, shown when chat is open -->
+    <svg id="bubble-icon-close" xmlns="http://www.w3.org/2000/svg"
+         width="28" height="28" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2.5"
+         stroke-linecap="round" stroke-linejoin="round"
+         style="display: none;">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+
+
+  <!--
+    ═══════════════════════════════════════════════════════
+    THE CHAT WINDOW
+    Hidden by default. Appears when the bubble is clicked.
+    Contains: a header, the message area, and the input bar.
+    ═══════════════════════════════════════════════════════
+  -->
+  <div id="chat-window" class="chat-window hidden">
+
+    <!-- Top header bar with the school name and a close button -->
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <!-- Small dot to suggest the bot is "online" -->
+        <span class="status-dot"></span>
+        <div>
+          <div class="chat-title">Urvi Montessori</div>
+          <div class="chat-subtitle">Ask me anything</div>
+        </div>
+      </div>
+      <!-- X button inside the window (alternative way to close) -->
+      <button id="close-btn" class="close-btn" aria-label="Close chat">&times;</button>
+    </div>
+
+    <!--
+      THE MESSAGES AREA
+      All chat messages (both user and bot) will appear here.
+      script.js adds new <div> elements inside this container.
+    -->
+    <div id="chat-messages" class="chat-messages">
+      <!-- Messages are inserted here dynamically by script.js -->
+    </div>
+
+    <!--
+      THE INPUT BAR
+      Where the user types their message and hits Send (or Enter).
+    -->
+    <div class="chat-input-area">
+      <input
+        type="text"
+        id="user-input"
+        placeholder="Type your message…"
+        autocomplete="off"
+        aria-label="Type your message"
+      />
+      <button id="send-btn" aria-label="Send message">
+        <!-- Paper-plane send icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+             viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+
+  </div><!-- end #chat-window -->
+
+
+  <!-- Link to our JavaScript file — placed at the bottom so HTML loads first -->
+  <script src="script.js"></script>
+</body>
+</html>
