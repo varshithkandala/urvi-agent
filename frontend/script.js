@@ -311,11 +311,27 @@ function addMessage(text, sender) {
   // Inner bubble: the coloured rounded box
   const bubble = document.createElement('div');
   bubble.classList.add('bubble');
-  /*
-    We use .textContent (not .innerHTML) so that any HTML characters in
-    the text are displayed as plain text — this prevents XSS injection.
-  */
-  bubble.textContent = text;
+
+  if (sender === 'bot') {
+    /*
+      Bot replies may contain Markdown (**bold**, *italics*, bullet lists)
+      from the AI, so we render it to real HTML with `marked`.
+      That HTML is then passed through DOMPurify.sanitize(), which strips
+      anything unsafe (e.g. <script> tags, onclick handlers) before it's
+      inserted — so even if the AI's reply ever contained malicious HTML,
+      it can't execute.
+    */
+    bubble.innerHTML = DOMPurify.sanitize(marked.parse(text));
+  } else {
+    /*
+      User input (and error notices) is NEVER parsed as Markdown/HTML.
+      .textContent always displays the raw string as plain text, so a
+      parent typing "<img onerror=...>" just sees that literal text —
+      it can never be interpreted as HTML. This is what prevents XSS
+      from user input.
+    */
+    bubble.textContent = text;
+  }
 
   // Small label below the bubble: "You" or "Urvi"
   const label = document.createElement('div');
