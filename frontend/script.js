@@ -536,7 +536,7 @@ async function sendMessageText(text) {
      try/catch handles network errors gracefully.
   ─────────────────────────────────────────────────────────────────── */
   try {
-    const response = await fetch('http://localhost:3000/chat', {
+    const response = await fetch('https://urvi-agent.onrender.com/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json', // "I'm sending JSON"
