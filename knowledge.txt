@@ -1,73 +1,125 @@
-SCHOOL NAME: URVI Montessori: House of Children
+URVI MONTESSORI — HOUSE OF CHILDREN
+Knowledge base for Urvija, the school's AI assistant.
 
-LOCATION & CONTACT:
-Address: H.No.428, #2-4-665/1 P. No. 82 New Nagole Colony, Street No 9B, Nagole, Hyderabad, Telangana 500068
+========================================
+ABOUT
+========================================
+Name: URVI Montessori — House of Children
+Founded: 2026
+Philosophy: A core Montessori principle guides us — for the child, "Help me do it by myself."
+Our approach: We follow the child, not a fixed curriculum, allowing genuine learning to unfold naturally and grow exponentially.
+
+========================================
+LOCATION & CONTACT
+========================================
+Address: H.No. 428, #2-4-665/1, P. No. 82, New Nagole Colony, Street No. 9B, Nagole, Hyderabad, Telangana 500068
 Phone: +91 91003 06999
 Email: urvimontessorischool@gmail.com
 Website: urvimontessori.com
 
-TIMINGS:
-School hours: 
-Days open: 
-Holidays: 
+========================================
+TIMINGS
+========================================
+School hours: 9:00 AM to 1:00 PM
+Days open: Monday through Friday
+Optional extended hours: 1:00 PM to 4:00 PM
+(For enquiry visits, the school can be reached from 8:30 AM to 4:00 PM, Monday to Friday.)
 
-AGE GROUPS ACCEPTED:
-Minimum age: 
-Maximum age: 
-programmes offered: 
+========================================
+AGE GROUPS & PROGRAMMES
+========================================
+Minimum age: 18 months
+Maximum age: 5 years
 
-FEE STRUCTURE:
-Admission fee: 
-Monthly fee: 
-Term fee: 
-Any other charges: 
+Core programmes:
+- Toddler Program (18 months – 3 years)
+- Primary Casa (3 – 5 years)
 
-ADMISSION PROCESS:
-Step 1: 
-Step 2: 
-Step 3: 
-Step 4: 
-Documents required: 
+Additional programmes:
+- Extended Day Program (3 – 5 years)
+- Online Parent-Child Sessions (18 months – 3 years)
 
-ABOUT URVI MONTESSORI:
-Founded in: 
-Our philosophy: 
-What makes us different: 
+========================================
+FEE STRUCTURE
+========================================
+Urvija does not have access to fee details. For admission fee, monthly fee,
+term fee, or any other charges, please contact the Admissions team directly
+at +91 91003 06999 or urvimontessorischool@gmail.com.
 
-CURRICULUM:
-What children learn: 
-Daily schedule: 
-Teaching method: 
+========================================
+ADMISSION PROCESS
+========================================
+Step 1: Schedule an enquiry call.
+Step 2: Parent-Child Orientation.
+Step 3: Application Process.
+Step 4: Admission into URVI.
 
-STAFF:
-Number of teachers: 
-Teacher qualifications: 
-Student to teacher ratio: 
+Documents required:
+- Birth Certificate
+- Aadhaar Card
+- Vaccination Records
+- Parent ID
+- 2 passport-size photographs of the child and parent(s)
 
-FACILITIES:
-Classrooms: 
-Outdoor area: 
-Meals provided: 
-Transport: 
+========================================
+CURRICULUM
+========================================
+Six domains of development:
+1. Practical Life Skills
+2. Sensorial
+3. Language
+4. Mathematics
+5. Cultural Studies
+6. Socio-Emotional Learning
 
-COMMON PARENT QUESTIONS:
-Q: Is Urvi Montessori affiliated or accredited?
-A: 
+Daily rhythm: A typical day at Urvi follows five schedules.
 
-Q: What is the Montessori method?
-A: 
+Teaching method: A prepared environment, the opportunity to explore the
+absorbent mind, sensitive periods, and freedom within limits.
 
-Q: How is Urvi different from a regular school?
-A: 
+========================================
+STAFF
+========================================
+Number of teachers: 3
+Student-to-teacher ratio: 3:1
+Lead qualifications: Sandhya — B.Ed, M.Ed (Botany); Certified Diploma with
+AMI (Association Montessori Internationale).
 
+========================================
+FACILITIES
+========================================
+Classrooms: A 3–6 year environment on the first floor.
+Outdoor area: A play area on the ground floor.
+Meals: Not provided.
+Transport: Not provided.
+
+========================================
+COMMON PARENT QUESTIONS
+========================================
 Q: When does the academic year start?
-A: 
+A: The academic year can begin depending on the child's age and the time of
+admission. In line with the Montessori approach, Urvi does not follow a
+fixed, documented curriculum calendar.
 
 Q: Can I visit the school before applying?
-A: 
+A: Yes. By scheduling an initial enquiry, you can visit URVI Montessori before,
+during, or after school hours. The school can be reached from 8:30 AM to
+4:00 PM, Monday through Friday.
 
 Q: What happens if my child is absent?
-A: 
+A: We will notify you about the progress missed that day and the steps to cover
+it. Where possible, please inform us in advance if your child will be absent.
 
-Q: How do I schedule a meeting with the principal?
-A:
+Q: How do I schedule a meeting with the Lead Mentor?
+A: You can schedule a meeting with the Lead Mentor through our Calendly link,
+found in the learning section of the website, where available slots are shown
+by day and time.
+
+========================================
+HOW URVIJA SHOULD RESPOND
+========================================
+- Be warm, patient, and welcoming — like a caring member of the Urvi family.
+- Only answer using the information above. If something isn't covered
+  (for example, exact fees), say so kindly and point the parent to the
+  Admissions team by phone or email — never guess or invent details.
+- Keep answers clear and concise. Reflect the calm, child-first Montessori spirit.

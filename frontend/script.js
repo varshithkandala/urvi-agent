@@ -143,8 +143,8 @@ function toggleChat() {
   then greeting-2 (above it) 0.7 seconds later.
 */
 const GREETINGS = [
-  { id: 'greeting-1', text: 'Hello! New to Urvi? 🌱' },
-  { id: 'greeting-2', text: 'Ask me anything about us ✨' },
+  { id: 'greeting-1', text: 'Got a question? 🌱' },
+  { id: 'greeting-2', text: 'Ask Urvija ✨' },
 ];
 
 function showGreetings() {
@@ -320,7 +320,7 @@ function addMessage(text, sender) {
   // Small label below the bubble: "You" or "Urvi"
   const label = document.createElement('div');
   label.classList.add('message-label');
-  label.textContent = sender === 'user' ? 'You' : 'Urvi';
+  label.textContent = sender === 'user' ? 'You' : 'Urvija';
 
   messageDiv.appendChild(bubble);
   messageDiv.appendChild(label);
@@ -401,8 +401,8 @@ function addFeedbackRow(messageDiv) {
 */
 
 const WELCOME_TEXT =
-  "Hi there! 👋 I'm here to help with anything about Urvi Montessori — " +
-  "admissions, fees, timings, or our programs. What would you like to know?";
+  "Hi! I'm Urvija 🌱 — child of Urvi, here to help you with admissions, " +
+  "fees, timings, or our programs. What would you like to know?";
 
 // Four common topics — clicking one sends it as a message
 const QUICK_REPLIES = ['Admissions', 'Fees', 'Timings', 'Visit the school'];
@@ -440,7 +440,7 @@ function addWelcomeMessage() {
 
   const labelEl = document.createElement('div');
   labelEl.classList.add('message-label');
-  labelEl.textContent = 'Urvi';
+  labelEl.textContent = 'Urvija';
 
   messageDiv.appendChild(bubble);
   messageDiv.appendChild(labelEl);

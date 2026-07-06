@@ -64,11 +64,22 @@ body {
   50%       { transform: translateY(-7px); }
 }
 
-/* Expanding ring that grows outward and fades — attention-grabber */
-@keyframes ring-pulse {
-  0%   { transform: scale(1);    opacity: 0.65; }
-  70%  { transform: scale(1.55); opacity: 0;    }
-  100% { transform: scale(1.55); opacity: 0;    }
+/*
+  Energy halo behind the orb — scales outward and pulses opacity.
+  Looks like a force-field breathing in and out.
+*/
+@keyframes halo-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.80; }
+  50%       { transform: scale(1.22); opacity: 0.28; }
+}
+
+/*
+  Faint watermark inside the chat window drifts slowly up and down.
+  Using a longer duration (9 s) keeps it subtle and non-distracting.
+*/
+@keyframes watermark-float {
+  0%, 100% { transform: translateY(0);     }
+  50%       { transform: translateY(-12px); }
 }
 
 /* Greeting bubble slides in from the right */
@@ -105,6 +116,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   #chat-bubble,
   #chat-bubble::before,
+  #chat-bubble::after,       /* halo */
+  .chat-messages::before,    /* watermark drift */
   .greeting-bubble,
   .status-dot,
   .typing-indicator span,
@@ -119,12 +132,16 @@ body {
 }
 
 
-/* ══ 4. FLOATING BUBBLE BUTTON ══════════════════════════════════════ */
+/* ══ 4. FLOATING BUBBLE BUTTON — "protective orb" ═══════════════════ */
 /*
-  "position: fixed" anchors it to the viewport — it stays in the corner
-  even when the page scrolls.
-  The float animation gently bobs it up/down to invite a click.
-  The ::before ring pulses outward to draw attention.
+  The orb is a translucent glass sphere.  Layers (front to back):
+    ::before  — a static glossy white streak near the top (sells the glass)
+    #bubble-logo — the emblem, vivid, never cropped (object-fit: contain)
+    button bg — radial-gradient frosted glass, brand green + blue tints
+    ::after   — energy halo that breathes in and out behind the sphere
+
+  "position: fixed" anchors it to the viewport corner even when scrolled.
+  "overflow: visible" lets the halo extend beyond the button's edge.
 */
 #chat-bubble {
   position: fixed;
@@ -132,78 +149,162 @@ body {
   right: 24px;
   z-index: 9999;
 
-  /* Circle sizing */
-  width: 64px;
-  height: 64px;
+  /* Larger orb — 82 px gives the emblem room to breathe */
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
-  border: 3px solid #fff;
-  overflow: hidden;       /* Clips the logo to the circle */
+
+  /* No hard white ring — the glass gradient provides the edge */
+  border: none;
+
+  /* overflow: visible so the halo (::after) can extend outside */
+  overflow: visible;
   padding: 0;
   cursor: pointer;
 
-  /* Brand-colored glow shadow */
-  box-shadow:
-    0 4px 18px rgba(28, 105, 195, 0.38),
-    0 2px 6px  rgba(28, 105, 195, 0.22);
+  /*
+    Frosted-glass fill:
+      centre  — bright white (the "light coming through the glass")
+      middle  — brand green tint
+      edge    — brand blue tint
+  */
+  background: radial-gradient(
+    circle at 42% 38%,
+    rgba(255, 255, 255, 0.72)  0%,
+    rgba(139, 197,  63, 0.22) 45%,
+    rgba( 28, 105, 195, 0.28) 100%
+  );
 
-  /* Center both the logo img and the X icon */
+  /* Frosted-glass blur — blurs whatever page content sits behind */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  /*
+    Layered shadows:
+      outer glow — brand blue ambient
+      inner top rim — bright white (glass edge highlight)
+      inner bottom rim — faint blue tint
+  */
+  box-shadow:
+    0 6px 28px rgba( 28, 105, 195, 0.38),
+    0 2px  8px rgba( 28, 105, 195, 0.20),
+    inset 0  1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -1px 0 rgba( 28, 105, 195, 0.18);
+
+  /* Center the emblem img and the X icon */
   display: flex;
   align-items: center;
   justify-content: center;
 
-  background: #fff;
+  /* Smooth hover scale + shadow transitions */
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, backdrop-filter 0.22s ease;
 
-  /* Smooth hover transitions */
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-
-  /* Floating up-and-down animation */
+  /* Gentle up-and-down float */
   animation: float 3.4s ease-in-out infinite;
 }
 
-/* Pulsing ring drawn with a pseudo-element — no extra HTML needed */
+/*
+  GLOSSY WHITE HIGHLIGHT (::before)
+  A soft oval near the top of the sphere, simulating a light source
+  reflecting off the curved glass surface.  Static — no animation.
+*/
 #chat-bubble::before {
   content: '';
   position: absolute;
-  inset: -7px;             /* Extends 7px outside the button edges */
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 17px;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.82) 0%, transparent 100%);
   border-radius: 50%;
-  border: 2.5px solid rgba(28, 105, 195, 0.50);
-  animation: ring-pulse 2.6s ease-out infinite;
-  pointer-events: none;    /* Clicks pass through to the button */
+  pointer-events: none;   /* Clicks fall through to the button */
+  z-index: 2;             /* In front of the emblem */
+  transition: opacity 0.22s ease;
 }
 
-/* While the chat is open, stop the float + ring (user's attention is elsewhere) */
+/*
+  ENERGY HALO (::after)
+  A radial gradient ring that extends 14 px beyond the button edge.
+  The centre of the gradient is covered by the button itself, so only
+  the outer ring is visible — like a force field radiating outward.
+*/
+#chat-bubble::after {
+  content: '';
+  position: absolute;
+  inset: -14px;           /* Extends 14 px beyond every edge */
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(139, 197,  63, 0.32)  0%,
+    rgba( 28, 105, 195, 0.24) 55%,
+    transparent               72%
+  );
+  animation: halo-pulse 2.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;            /* Behind the button background */
+  transition: opacity 0.22s ease;
+}
+
+/*
+  OPEN STATE — chat window is visible
+  Replace the glass orb with a plain white circle + X so it's a clear
+  "close" affordance.  Emblem and halo are hidden by script.js / CSS.
+*/
 #chat-bubble.is-open {
   animation: none;
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    0 4px 18px rgba(28, 105, 195, 0.28),
+    0 1px  5px rgba(28, 105, 195, 0.14);
 }
-#chat-bubble.is-open::before {
-  animation: none;
-  opacity: 0;
-}
+#chat-bubble.is-open::before { opacity: 0; }  /* hide gloss streak */
+#chat-bubble.is-open::after  { animation: none; opacity: 0; }  /* hide halo */
 
+/* Scale up slightly on hover; pause the float so it feels stable */
 #chat-bubble:hover {
   transform: scale(1.09);
-  box-shadow: 0 6px 24px rgba(28, 105, 195, 0.48);
-  animation-play-state: paused; /* Pause float on hover — cleaner feel */
+  box-shadow:
+    0 8px 34px rgba( 28, 105, 195, 0.46),
+    0 2px  8px rgba( 28, 105, 195, 0.20),
+    inset 0  1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -1px 0 rgba( 28, 105, 195, 0.18);
+  animation-play-state: paused;
 }
 
-#chat-bubble:active {
-  transform: scale(0.95);
-}
+#chat-bubble:active { transform: scale(0.95); }
 
-/* Logo image fills the entire circle */
+/*
+  EMBLEM IMAGE
+  74% of the orb, contained (never cropped), vivid colours.
+  z-index: 1 keeps it in front of the button background but
+  behind the ::before glossy highlight (z-index: 2).
+*/
 #bubble-logo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
+  width: 74%;
+  height: 74%;
+  object-fit: contain;   /* Never crop — show the full emblem shape */
   display: block;
+  position: relative;
+  z-index: 1;
+  border-radius: 0;      /* Not circular — emblem has its own shape */
 }
 
-/* X close icon inside the button */
+/*
+  CLOSE X ICON
+  Hidden by default. script.js shows it when the chat opens.
+  Sits centred in the now-white circle (#chat-bubble.is-open).
+*/
 #bubble-icon-close {
   color: #1C69C3;
   position: absolute;
-  /* Hidden by default; script.js toggles display */
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 
@@ -216,7 +317,7 @@ body {
 
 .greeting-bubbles {
   position: fixed;
-  bottom: 104px;   /* Sits just above the 64px button + gap */
+  bottom: 122px;   /* Sits just above the 82px orb + 24px bottom + 16px gap */
   right: 24px;
   z-index: 9998;
 
@@ -295,7 +396,7 @@ body {
 */
 .chat-window {
   position: fixed;
-  bottom: 104px;
+  bottom: 122px;   /* 82px orb + 24px from bottom + 16px gap */
   right: 24px;
   z-index: 9998;
 
@@ -372,6 +473,12 @@ body {
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.52);
   flex-shrink: 0;
+  /*
+    The emblem PNG has a transparent background but coloured pixels that
+    look muddy on the blue header.  brightness(0) turns every pixel black,
+    then invert(1) flips black → white — giving a crisp white silhouette.
+  */
+  filter: brightness(0) invert(1);
 }
 
 .chat-title {
@@ -421,6 +528,8 @@ body {
 /*
   flex: 1 makes this section grow to fill all space between the header
   and the input bar. overflow-y: auto adds a scrollbar only when needed.
+  position: relative is required so the ::before watermark can be
+  positioned absolutely inside this container.
 */
 .chat-messages {
   flex: 1;
@@ -430,6 +539,27 @@ body {
   flex-direction: column;
   gap: 10px;
   scroll-behavior: smooth;
+  position: relative;   /* needed for the watermark pseudo-element */
+}
+
+/*
+  WATERMARK — the emblem floats faintly behind all messages.
+  opacity: 0.07 keeps it barely visible (like a watermark on paper).
+  pointer-events: none means clicks pass right through it to messages.
+  z-index: 0 ensures message bubbles (normal flow) always appear on top.
+*/
+.chat-messages::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('urvi-emblem.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 58%;
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+  animation: watermark-float 9s ease-in-out infinite;
 }
 
 /* Thin, brand-colored custom scrollbar */
@@ -877,7 +1007,7 @@ body {
 
   .greeting-bubbles {
     right: 18px;
-    bottom: 96px;
+    bottom: 112px;   /* 82px orb + 18px bottom + 12px gap */
     /* Hide greetings on very narrow screens to avoid clutter */
     max-width: calc(100vw - 36px);
   }

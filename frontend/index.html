@@ -23,13 +23,13 @@
     <!-- Second greeting (shown 0.7 s after the first, sits on top) -->
     <div class="greeting-bubble" id="greeting-2">
       <button class="greeting-close" aria-label="Dismiss">✕</button>
-      <span class="greeting-text">Ask me anything about us ✨</span>
+      <span class="greeting-text">Ask Urvija ✨</span>
     </div>
 
     <!-- First greeting (shown first, sits closest to the chat button) -->
     <div class="greeting-bubble" id="greeting-1">
       <button class="greeting-close" aria-label="Dismiss">✕</button>
-      <span class="greeting-text">Hello! New to Urvi? 🌱</span>
+      <span class="greeting-text">Got a question? 🌱</span>
     </div>
 
   </div><!-- end #greeting-bubbles -->
@@ -37,17 +37,18 @@
 
   <!--
     ══════════════════════════════════════════════════════
-    FLOATING CHAT BUBBLE BUTTON
+    FLOATING CHAT BUBBLE BUTTON  — "protective orb" design
     Always visible in the bottom-right corner.
-    Shows the school logo and gently floats up and down.
-    A pulsing ring (CSS ::before) draws the eye.
+    The emblem sits inside a frosted-glass sphere that
+    floats up and down with a soft energy halo behind it.
+    When the chat opens the emblem hides and a plain ✕ shows.
     Clicking toggles the chat window open/closed.
     ══════════════════════════════════════════════════════
   -->
   <button id="chat-bubble" aria-label="Open chat">
 
-    <!-- School logo fills the round button -->
-    <img src="urvi-logo.jpeg" alt="Urvi Montessori" id="bubble-logo" />
+    <!-- Emblem (earth-globe cutout, transparent PNG) sits inside the glass orb -->
+    <img src="urvi-emblem.png" alt="Urvi Montessori" id="bubble-logo" />
 
     <!-- X icon — hidden normally, shown when the chat is open -->
     <svg id="bubble-icon-close"
@@ -81,14 +82,14 @@
     <!-- ── HEADER ─────────────────────────────────── -->
     <div class="chat-header">
       <div class="chat-header-info">
-        <!-- Logo shown again inside the header for branding -->
-        <img src="urvi-logo.jpeg" alt="Urvi Montessori logo" class="header-logo" />
+        <!-- Emblem shown in the header for branding -->
+        <img src="urvi-emblem.png" alt="Urvi Montessori logo" class="header-logo" />
         <div>
-          <div class="chat-title">Urvi Montessori</div>
+          <div class="chat-title">Urvija</div>
           <div class="chat-subtitle">
             <!-- Green dot = "online" -->
             <span class="status-dot" aria-hidden="true"></span>
-            We're here to help
+            I'm here to help.
           </div>
         </div>
       </div>
