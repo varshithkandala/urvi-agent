@@ -504,6 +504,12 @@ function hideTypingIndicator() {
 // Prevents firing multiple requests at the same time
 let isSending = false;
 
+/*
+  conversation holds the running back-and-forth so the backend can give
+  context-aware replies. Each entry is { role: 'user'|'assistant', content }.
+*/
+const conversation = [];
+
 async function sendMessageText(text) {
   // Nothing to send, or already waiting for a reply
   if (!text || isSending) return;
@@ -535,13 +541,8 @@ async function sendMessageText(text) {
       headers: {
         'Content-Type': 'application/json', // "I'm sending JSON"
       },
-      /*
-        TO SWITCH TO FULL HISTORY LATER:
-        Replace the line below with:
-          body: JSON.stringify({ messages: conversationHistory })
-        and update your backend to read req.body.messages.
-      */
-      body: JSON.stringify({ message: text }),
+// Send the new message plus the conversation so far (for memory)
+      body: JSON.stringify({ message: text, history: conversation }),
     });
 
     // response.ok is true for status codes 200–299
@@ -554,6 +555,10 @@ async function sendMessageText(text) {
 
     hideTypingIndicator();
     addMessage(data.reply, 'bot');
+
+    // Record this exchange so the next request includes it as context
+    conversation.push({ role: 'user', content: text });
+    conversation.push({ role: 'assistant', content: data.reply });
 
   } catch (error) {
     // Network down, backend not running, or a 5xx error
