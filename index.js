@@ -4,7 +4,6 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-const cors = require('cors');
 
 const app = express();
 app.use(cors());
