@@ -55,6 +55,6 @@ system: SYSTEM_PROMPT,
   }
 });
 
-app.listen(3000, () => {
+app.listen(process.env.PORT || 3000, () => {
   console.log('Urvi Agent is running on port 3000');
 });
