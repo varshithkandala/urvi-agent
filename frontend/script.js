@@ -18,18 +18,14 @@
     12. Utility: scroll to the bottom of the message area
     13. Initialise everything once the page has loaded
 
-  BACKEND ENDPOINT (do not change index.js):
-    POST http://localhost:3000/chat
-    Request body:  { "message": "user's text here" }
+  BACKEND ENDPOINT:
+    POST https://urvi-agent.onrender.com/chat
+    Request body:  { "message": "user's text", "history": [ ...prior turns ] }
     Response body: { "reply": "bot's reply here" }
 
-  HOW TO SWITCH TO FULL CONVERSATION HISTORY LATER:
-    1. Update the backend to read req.body.messages (array) instead of req.body.message
-    2. In sendMessageText() below, replace:
-         body: JSON.stringify({ message: text })
-       with:
-         body: JSON.stringify({ messages: conversationHistory })
-    The conversationHistory array is already kept up-to-date.
+  The `history` array (see section 8) gives the assistant conversational
+  memory. The backend keeps only the most recent turns, so the chat stays
+  fast and affordable even in a long conversation.
   ═══════════════════════════════════════════════════════════════════
 */
 
@@ -62,14 +58,11 @@ const mentorBtn       = document.getElementById('mentor-btn');         // "Talk 
 
 /* ── 2. CONVERSATION HISTORY ────────────────────────────────────── */
 /*
-  Every message (user and bot) is saved here in order.
-  Format: { role: 'user' | 'bot', text: 'message string' }
-
-  Currently the backend only reads { message } (the latest text).
-  Keeping history here means we can switch to sending the full array
-  later without restructuring the code — see the comment at the top.
+  The running conversation lives in the `conversation` array, declared in
+  section 8 (right next to the send logic that fills and uses it). Each
+  entry is { role: 'user' | 'assistant', content } and the array is sent to
+  the backend on every request so the assistant remembers the context.
 */
-const conversationHistory = [];
 
 
 /* ── 3. OPEN / CLOSE THE CHAT WINDOW ───────────────────────────── */
@@ -298,12 +291,6 @@ function addImageMessage(dataUrl) {
   Returns the created element (used by addWelcomeMessage to attach chips).
 */
 function addMessage(text, sender) {
-  // Record every real message in the conversation history
-  // (error messages are not recorded — they're just UI feedback)
-  if (sender !== 'error') {
-    conversationHistory.push({ role: sender, text: text });
-  }
-
   // Outer wrapper: sets left/right alignment via CSS class
   const messageDiv = document.createElement('div');
   messageDiv.classList.add('message', sender); // e.g. class="message bot"
@@ -462,8 +449,8 @@ function addWelcomeMessage() {
   messageDiv.appendChild(labelEl);
   chatMessages.appendChild(messageDiv);
 
-  // Record the welcome text in conversation history
-  conversationHistory.push({ role: 'bot', text: WELCOME_TEXT });
+  // The welcome text is UI-only — it is not added to `conversation`, since
+  // the backend supplies its own greeting behaviour via the system prompt.
 
   scrollToBottom();
 }
@@ -611,7 +598,7 @@ function sendMessage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          conversation: conversationHistory,   // Full context for the teacher
+          conversation: conversation,   // Full context for the teacher
           timestamp: new Date().toISOString(),
         })
       });
