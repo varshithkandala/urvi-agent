@@ -56,6 +56,17 @@ const imageRemoveBtn  = document.getElementById('image-remove-btn');  // ✕ ins
 const mentorBtn       = document.getElementById('mentor-btn');         // "Talk to Mentor" button
 
 
+/* ── BACKEND URL ────────────────────────────────────────────────── */
+/*
+  Base address of our server. All three endpoints live here:
+    POST /chat            — send a message, get Urvija's reply
+    POST /feedback        — record a 👍 / 👎 on a reply
+    POST /mentor-request  — alert staff that a parent wants a real person
+  For local testing, change this to 'http://localhost:3000'.
+*/
+const BACKEND_URL = 'https://urvi-agent.onrender.com';
+
+
 /* ── 2. CONVERSATION HISTORY ────────────────────────────────────── */
 /*
   The running conversation lives in the `conversation` array, declared in
@@ -331,7 +342,7 @@ function addMessage(text, sender) {
   // Add thumbs-up / thumbs-down buttons under every real bot reply
   // (not for user messages, and not for error notices)
   if (sender === 'bot') {
-    addFeedbackRow(messageDiv);
+    addFeedbackRow(messageDiv, text);
   }
 
   chatMessages.appendChild(messageDiv);
@@ -355,7 +366,7 @@ function addMessage(text, sender) {
     You could also include the bot's reply text so you know exactly
     which answer was rated. See the click handler below.
 */
-function addFeedbackRow(messageDiv) {
+function addFeedbackRow(messageDiv, replyText) {
   const row = document.createElement('div');
   row.classList.add('feedback-row');
 
@@ -375,16 +386,20 @@ function addFeedbackRow(messageDiv) {
       // Highlight the button that was clicked
       btn.classList.add('selected');
 
-      // TODO (backend): Replace the console.log below with a real fetch:
-      //   fetch('http://localhost:3000/feedback', {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({
-      //       rating: ratingValue,                   // "up" or "down"
-      //       timestamp: new Date().toISOString(),
-      //     })
-      //   });
-      console.log('Feedback received:', ratingValue); // Remove once backend is wired up
+      // Tell the backend how this reply was rated (and which reply it was)
+      // so staff can see which answers are helpful vs. confusing.
+      fetch(`${BACKEND_URL}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: ratingValue,               // "up" or "down"
+          reply: replyText,                  // the bot answer being rated
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch(function (err) {
+        // Feedback is non-critical — never disrupt the chat if it fails
+        console.error('Could not send feedback:', err);
+      });
     });
 
     return btn;
@@ -521,7 +536,11 @@ async function sendMessageText(text) {
   sendBtn.disabled = true;  // Gray out the send button visually
   userInput.value = '';     // Clear the input field
 
-  // If a parent attached an image, show it in the chat first, then clear the preview
+  // If a parent attached an image, show it in the chat first, then clear the
+  // preview. We capture it into a local variable BEFORE clearing, because
+  // clearImagePreview() resets pendingImageDataUrl to null — and we still
+  // need to send the image to the backend below.
+  const imageToSend = pendingImageDataUrl;
   if (pendingImageDataUrl) {
     addImageMessage(pendingImageDataUrl);
     clearImagePreview();
@@ -539,13 +558,14 @@ async function sendMessageText(text) {
      try/catch handles network errors gracefully.
   ─────────────────────────────────────────────────────────────────── */
   try {
-    const response = await fetch('https://urvi-agent.onrender.com/chat', {
+    const response = await fetch(`${BACKEND_URL}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json', // "I'm sending JSON"
       },
-// Send the new message plus the conversation so far (for memory)
-      body: JSON.stringify({ message: text, history: conversation }),
+      // Send the new message, the conversation so far (for memory), and the
+      // attached image if there is one (imageToSend is null when there isn't).
+      body: JSON.stringify({ message: text, history: conversation, image: imageToSend }),
     });
 
     // response.ok is true for status codes 200–299
@@ -614,6 +634,19 @@ function handleMentorRequest() {
     "we're always happy to help!";
 
   addMessage(warmMessage, 'bot');
+
+  // Notify staff so a real person can follow up. We send the conversation so
+  // far so the teacher has full context before reaching out.
+  fetch(`${BACKEND_URL}/mentor-request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      conversation: conversation,          // full context for the teacher
+      timestamp: new Date().toISOString(),
+    }),
+  }).catch(function (err) {
+    console.error('Could not send mentor request:', err);
+  });
 
   // Change the button to a confirmation state so parents can't click it twice
   if (mentorBtn) {
