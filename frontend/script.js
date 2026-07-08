@@ -443,7 +443,18 @@ function addWelcomeMessage() {
     chip.classList.add('chip');
     chip.textContent = label;
 
-    chip.addEventListener('click', function () {
+    chip.addEventListener('click', function (event) {
+      // BUG FIX: Stop this click from bubbling up to the document-level
+      // "click outside to close" listener (see section 10).
+      //
+      // Why this matters: below we call chipsRow.remove(), which detaches
+      // the chip from the page. If the click were allowed to keep bubbling,
+      // the outside-click listener would later run chatWindow.contains(target)
+      // on this now-removed chip — which returns false — and wrongly conclude
+      // the click happened OUTSIDE the chat, closing the window. Stopping
+      // propagation here keeps the chat open and lets the chip do its job.
+      event.stopPropagation();
+
       // Remove ALL chips so they can only be used once and don't clutter history
       chipsRow.remove();
       // Send the chip label as the user's message
@@ -706,6 +717,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Click anywhere OUTSIDE the chat window and outside the bubble → close
   document.addEventListener('click', function (event) {
+    // Safety guard: if the clicked element has already been removed from the
+    // page by an earlier handler (e.g. a quick-reply chip that removes itself),
+    // then contains() would give a misleading "false" and close the chat by
+    // mistake. In that case the click clearly came from inside our own UI, so
+    // we simply ignore it here. (The chip handler also calls stopPropagation(),
+    // so this is a belt-and-braces second line of defence.)
+    if (!document.body.contains(event.target)) return;
+
     const outsideWindow    = !chatWindow.contains(event.target);
     const outsideBubble    = !chatBubble.contains(event.target);
     const outsideGreetings = !greetingBubbles.contains(event.target);
