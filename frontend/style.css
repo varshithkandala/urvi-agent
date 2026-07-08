@@ -310,17 +310,27 @@ button, input {
 
 /*
   CLOSE X ICON
-  Hidden by default. script.js shows it when the chat opens.
   Sits centred in the now-white circle (#chat-bubble.is-open).
+
+  IMPORTANT (bug fix): this MUST be hidden by default. When the chat is
+  CLOSED the orb should show ONLY the emblem logo. Previously this rule set
+  `display: flex`, which left the ✕ permanently visible on top of the emblem
+  even on page load — making the orb look cluttered/broken.
+
+  It is now `display: none` by default. script.js reveals it (sets the inline
+  style back to `block`) only when the chat opens, and hides it again on close,
+  so exactly ONE of {emblem, ✕} is ever visible at a time.
 */
 #bubble-icon-close {
   color: #1C69C3;
   position: absolute;
+  /* Centre the ✕ in the middle of the round orb */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 28px;
   height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: none;   /* hidden until the chat is opened (see note above) */
 }
 
 
