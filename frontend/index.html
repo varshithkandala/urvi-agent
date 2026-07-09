@@ -115,8 +115,65 @@
           </div>
         </div>
       </div>
-      <!-- X button inside the header — another way to close the chat -->
-      <button id="close-btn" class="close-btn" aria-label="Close chat">&times;</button>
+      <!--
+        HEADER ACTION BUTTONS (right side of the header)
+        Three small icon buttons: mute/unmute reply sounds, start a new
+        chat, and close. Grouped in one container so they line up neatly.
+      -->
+      <div class="header-actions">
+
+        <!--
+          SOUND TOGGLE
+          Turns the little "new reply" chime + vibration on or off.
+          OFF by default. aria-pressed tells screen readers the on/off state.
+          Two icons live inside: a normal bell (shown when ON) and a
+          bell-with-a-slash (shown when OFF). CSS swaps which one is visible
+          based on the .is-on class that script.js toggles.
+        -->
+        <button id="sound-btn" class="header-icon-btn" type="button"
+                aria-label="Turn reply sounds on" aria-pressed="false"
+                title="Reply sounds">
+          <!-- Bell ON (visible only when sounds are enabled) -->
+          <svg class="icon-bell-on" xmlns="http://www.w3.org/2000/svg"
+               width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <!-- Bell OFF / muted (visible by default) -->
+          <svg class="icon-bell-off" xmlns="http://www.w3.org/2000/svg"
+               width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true">
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            <path d="M18.63 13A17.89 17.89 0 0 1 18 8"/>
+            <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/>
+            <path d="M18 8a6 6 0 0 0-9.33-5"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+
+        <!--
+          NEW CHAT / START OVER
+          Clears the saved conversation and shows a fresh welcome message.
+          script.js asks for confirmation first so a parent can't wipe the
+          chat by accident.
+        -->
+        <button id="new-chat-btn" class="header-icon-btn" type="button"
+                aria-label="Start a new chat" title="Start over">
+          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+
+        <!-- X button inside the header — another way to close the chat -->
+        <button id="close-btn" class="close-btn" aria-label="Close chat">&times;</button>
+      </div>
     </div>
 
     <!-- ── MESSAGES ────────────────────────────────── -->
@@ -223,6 +280,16 @@
         </svg>
         Talk to a Montessori Mentor
       </button>
+
+      <!--
+        PRIVACY REASSURANCE
+        A tiny trust line so parents feel safe sharing details. The lock
+        emoji is marked aria-hidden so screen readers don't read "lock".
+      -->
+      <div class="privacy-note">
+        <span aria-hidden="true">🔒</span>
+        We only use your info to respond to your enquiry.
+      </div>
 
       <div class="footer-brand">Powered by Urvi Montessori</div>
     </div>

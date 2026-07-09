@@ -55,6 +55,10 @@ const imageRemoveBtn  = document.getElementById('image-remove-btn');  // ✕ ins
 // ── NEW: mentor + feedback elements ─────────────────────────────
 const mentorBtn       = document.getElementById('mentor-btn');         // "Talk to Mentor" button
 
+// ── NEW: header controls ────────────────────────────────────────
+const soundBtn        = document.getElementById('sound-btn');          // Mute/unmute reply sounds
+const newChatBtn      = document.getElementById('new-chat-btn');       // Start-over button
+
 
 /* ── BACKEND URL ────────────────────────────────────────────────── */
 /*
@@ -74,6 +78,200 @@ const BACKEND_URL = 'https://urvi-agent.onrender.com';
   entry is { role: 'user' | 'assistant', content } and the array is sent to
   the backend on every request so the assistant remembers the context.
 */
+
+
+/* ── 2b. TIMESTAMPS, SAVING, TOPICS & SOUND (shared helpers) ─────── */
+/*
+  These small helpers power four of the "feels like a real chat" features:
+    • formatTime()          — turns a date into "2:14 PM"
+    • save/loadConversation — remember the chat across page reloads
+    • TOPIC_CHIPS           — the suggestion chips (welcome + follow-ups)
+    • playReplySound()      — the optional new-reply chime + vibration
+*/
+
+/*
+  formatTime(date) → a friendly clock string like "2:14 PM".
+  Uses the browser's built-in locale formatter so it matches the user's
+  region (12-hour here for a warm, familiar feel).
+*/
+function formatTime(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+/*
+  transcript = everything shown on screen, so we can redraw the chat after
+  a page reload. Each entry is:
+    { sender: 'user'|'bot', text, time (ISO string), image (dataUrl|null) }
+  (Error notices and the welcome message are NOT saved — they're transient.)
+*/
+let transcript = [];
+
+// Which suggestion topics the parent has already used (so we stop offering them)
+let askedTopics = [];
+
+// The key our saved data lives under in the browser's localStorage
+const STORAGE_KEY = 'urvi-chat-v1';
+
+/*
+  saveConversation() writes the current chat to the browser so a refresh
+  doesn't lose it. localStorage only stores text, so we JSON.stringify.
+  Wrapped in try/catch because storage can be full or blocked (private mode).
+*/
+function saveConversation() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ conversation, transcript, askedTopics })
+    );
+  } catch (err) {
+    console.warn('Could not save chat:', err);
+  }
+}
+
+/*
+  loadConversation() reads any saved chat back on page load.
+  Returns true if it restored a previous conversation (so the caller knows
+  to skip the fresh welcome message), or false if there was nothing saved.
+*/
+function loadConversation() {
+  let saved;
+  try {
+    saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  } catch (err) {
+    return false; // Corrupted/blocked storage — just start fresh
+  }
+  if (!saved || !Array.isArray(saved.transcript) || saved.transcript.length === 0) {
+    return false;
+  }
+
+  // Restore the backend-memory array and the "already asked" topic list
+  if (Array.isArray(saved.conversation)) {
+    saved.conversation.forEach((m) => conversation.push(m));
+  }
+  if (Array.isArray(saved.askedTopics)) {
+    askedTopics = saved.askedTopics;
+  }
+
+  // Redraw each saved bubble. save:false stops these from being re-saved
+  // (they're already in storage), and we pass the original time string.
+  saved.transcript.forEach((m) => {
+    if (m.image) {
+      addImageMessage(m.image, { save: false });
+    }
+    if (m.text) {
+      addMessage(m.text, m.sender, { save: false, time: m.time });
+    }
+  });
+
+  // Keep our in-memory transcript in sync with what we just drew
+  transcript = saved.transcript;
+
+  // If the last thing said was from Urvija, offer follow-up chips again
+  const last = transcript[transcript.length - 1];
+  if (last && last.sender === 'bot') {
+    const lastBubble = chatMessages.querySelector('.message.bot:last-of-type .bubble');
+    if (lastBubble) showFollowUpChips(lastBubble);
+  }
+
+  return true;
+}
+
+/*
+  TOPIC_CHIPS — the common questions we surface as tappable chips.
+    label = what shows on the chip
+    query = the actual message sent to Urvija when tapped
+  The welcome message shows the first four; follow-up suggestions draw from
+  this whole list, skipping any the parent has already asked.
+*/
+const TOPIC_CHIPS = [
+  { label: 'Admissions',       query: 'Admissions' },
+  { label: 'Fees',             query: 'Fees' },
+  { label: 'Timings',          query: 'Timings' },
+  { label: 'Visit the school', query: 'Visit the school' },
+  { label: 'Programs',         query: 'Tell me about your programs' },
+];
+
+/* ── SOUND / VIBRATION ON NEW REPLY (off by default) ────────────── */
+/*
+  soundEnabled is remembered in localStorage so the parent's choice sticks.
+  It starts OFF — we never surprise anyone with noise.
+*/
+let soundEnabled = false;
+const SOUND_KEY = 'urvi-sound';
+
+/*
+  playReplySound() makes a short, soft two-note chime using the Web Audio
+  API — no sound file needed. Wrapped in try/catch so an unsupported browser
+  (or a blocked audio context) never breaks the chat.
+*/
+function playReplySound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    // Two quick notes (a gentle "ding-dong")
+    osc.frequency.setValueAtTime(660, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.09);
+    // Fade in fast, then fade out so it isn't harsh
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.26);
+  } catch (err) {
+    /* Audio not available — silently ignore, it's a nice-to-have */
+  }
+}
+
+/*
+  notifyNewReply() is called whenever Urvija sends a fresh reply. If sounds
+  are on, it plays the chime and gives a tiny buzz on phones that support it.
+*/
+function notifyNewReply() {
+  if (!soundEnabled) return;
+  playReplySound();
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+
+/*
+  updateSoundButton() keeps the header button's appearance and its
+  screen-reader state (aria-pressed / aria-label) in sync with soundEnabled.
+*/
+function updateSoundButton() {
+  if (!soundBtn) return;
+  soundBtn.classList.toggle('is-on', soundEnabled);
+  soundBtn.setAttribute('aria-pressed', String(soundEnabled));
+  soundBtn.setAttribute(
+    'aria-label',
+    soundEnabled ? 'Turn reply sounds off' : 'Turn reply sounds on'
+  );
+}
+
+/* Flip sounds on/off, remember the choice, and preview the chime when turning on */
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  try {
+    localStorage.setItem(SOUND_KEY, soundEnabled ? 'on' : 'off');
+  } catch (err) {
+    /* ignore storage errors — the toggle still works for this session */
+  }
+  updateSoundButton();
+  if (soundEnabled) playReplySound(); // instant feedback so they hear what it does
+}
+
+/* Read the saved sound choice on page load (default: off) */
+function loadSoundPreference() {
+  try {
+    soundEnabled = localStorage.getItem(SOUND_KEY) === 'on';
+  } catch (err) {
+    soundEnabled = false;
+  }
+  updateSoundButton();
+}
 
 
 /* ── 3. OPEN / CLOSE THE CHAT WINDOW ───────────────────────────── */
@@ -264,7 +462,11 @@ function clearImagePreview() {
   Adds the chosen image as a user bubble on the right side of the chat.
   Called by sendMessageText() before sending the text message.
 */
-function addImageMessage(dataUrl) {
+function addImageMessage(dataUrl, opts = {}) {
+  // save defaults to true; passing save:false (when restoring a saved chat)
+  // stops us from double-saving an image that's already in storage.
+  const shouldSave = opts.save !== undefined ? opts.save : true;
+
   const messageDiv = document.createElement('div');
   messageDiv.classList.add('message', 'user');
 
@@ -286,6 +488,13 @@ function addImageMessage(dataUrl) {
   messageDiv.appendChild(bubble);
   messageDiv.appendChild(label);
   chatMessages.appendChild(messageDiv);
+
+  // Remember the image so it reappears after a page reload
+  if (shouldSave) {
+    transcript.push({ sender: 'user', text: '', time: new Date().toISOString(), image: dataUrl });
+    saveConversation();
+  }
+
   scrollToBottom();
 }
 
@@ -300,8 +509,20 @@ function addImageMessage(dataUrl) {
     sender — 'bot', 'user', or 'error'
 
   Returns the created element (used by addWelcomeMessage to attach chips).
+
+  opts (all optional):
+    time — an ISO timestamp string to show/restore. Defaults to "now".
+    save — whether to record this message for reload persistence.
+           Defaults to true for real user/bot messages; error notices and
+           restored-from-storage messages pass save:false.
 */
-function addMessage(text, sender) {
+function addMessage(text, sender, opts = {}) {
+  // Work out the timestamp: use the one passed in (when restoring a saved
+  // chat) or stamp it with the current time for a brand-new message.
+  const timeIso = opts.time || new Date().toISOString();
+  // By default we save real messages, but never error notices.
+  const shouldSave = opts.save !== undefined ? opts.save : sender !== 'error';
+
   // Outer wrapper: sets left/right alignment via CSS class
   const messageDiv = document.createElement('div');
   messageDiv.classList.add('message', sender); // e.g. class="message bot"
@@ -331,10 +552,17 @@ function addMessage(text, sender) {
     bubble.textContent = text;
   }
 
-  // Small label below the bubble: "You" or "Urvi"
+  // Small label below the bubble: name + timestamp, e.g. "Urvija · 2:14 PM"
   const label = document.createElement('div');
   label.classList.add('message-label');
   label.textContent = sender === 'user' ? 'You' : 'Urvija';
+  // Error notices have no sender name/time — keep them clean
+  if (sender !== 'error') {
+    const timeEl = document.createElement('span');
+    timeEl.classList.add('message-time');
+    timeEl.textContent = formatTime(new Date(timeIso));
+    label.appendChild(timeEl);
+  }
 
   messageDiv.appendChild(bubble);
   messageDiv.appendChild(label);
@@ -346,6 +574,12 @@ function addMessage(text, sender) {
   }
 
   chatMessages.appendChild(messageDiv);
+
+  // Remember this message so it survives a page reload (section 2b)
+  if (shouldSave) {
+    transcript.push({ sender, text, time: timeIso, image: null });
+    saveConversation();
+  }
 
   scrollToBottom();
   return messageDiv; // Returned so the caller can append chips inside the bubble
@@ -422,8 +656,42 @@ const WELCOME_TEXT =
   "Hi! I'm Urvija 🌱 — child of Urvi, here to help you with admissions, " +
   "fees, timings, or our programs. What would you like to know?";
 
-// Four common topics — clicking one sends it as a message
-const QUICK_REPLIES = ['Admissions', 'Fees', 'Timings', 'Visit the school'];
+/*
+  makeTopicChip(topic, containerToRemove)
+    Builds one tappable chip button shared by BOTH the welcome message and
+    the follow-up suggestions.
+      topic            = { label, query } from TOPIC_CHIPS
+      containerToRemove = the chip group to delete once any chip is tapped,
+                          so chips are used only once
+*/
+function makeTopicChip(topic, containerToRemove) {
+  const chip = document.createElement('button');
+  chip.classList.add('chip');
+  chip.type = 'button';
+  chip.textContent = topic.label;
+
+  chip.addEventListener('click', function (event) {
+    // Stop the click reaching the document "click-outside-to-close" listener.
+    // We remove this chip below; without stopPropagation the close logic would
+    // see a now-detached element, think the click landed outside the window,
+    // and wrongly close the chat. (Same fix we applied to the original chips.)
+    event.stopPropagation();
+
+    // Remove the whole chip group so it can't be tapped twice
+    if (containerToRemove) containerToRemove.remove();
+
+    // Never offer this topic again as a follow-up suggestion
+    if (!askedTopics.includes(topic.label)) {
+      askedTopics.push(topic.label);
+      saveConversation();
+    }
+
+    // Send the topic's question as the parent's message
+    sendMessageText(topic.query);
+  });
+
+  return chip;
+}
 
 function addWelcomeMessage() {
   // Build the message row manually so we can inject chips inside the bubble
@@ -434,34 +702,11 @@ function addWelcomeMessage() {
   bubble.classList.add('bubble');
   bubble.textContent = WELCOME_TEXT;
 
-  // Chip row below the welcome text
+  // Chip row below the welcome text — the first four common topics
   const chipsRow = document.createElement('div');
   chipsRow.classList.add('quick-reply-chips');
-
-  QUICK_REPLIES.forEach(function (label) {
-    const chip = document.createElement('button');
-    chip.classList.add('chip');
-    chip.textContent = label;
-
-    chip.addEventListener('click', function (event) {
-      // BUG FIX: Stop this click from bubbling up to the document-level
-      // "click outside to close" listener (see section 10).
-      //
-      // Why this matters: below we call chipsRow.remove(), which detaches
-      // the chip from the page. If the click were allowed to keep bubbling,
-      // the outside-click listener would later run chatWindow.contains(target)
-      // on this now-removed chip — which returns false — and wrongly conclude
-      // the click happened OUTSIDE the chat, closing the window. Stopping
-      // propagation here keeps the chat open and lets the chip do its job.
-      event.stopPropagation();
-
-      // Remove ALL chips so they can only be used once and don't clutter history
-      chipsRow.remove();
-      // Send the chip label as the user's message
-      sendMessageText(label);
-    });
-
-    chipsRow.appendChild(chip);
+  TOPIC_CHIPS.slice(0, 4).forEach(function (topic) {
+    chipsRow.appendChild(makeTopicChip(topic, chipsRow));
   });
 
   // Append chips INSIDE the bubble (visually below the welcome text)
@@ -478,6 +723,37 @@ function addWelcomeMessage() {
   // The welcome text is UI-only — it is not added to `conversation`, since
   // the backend supplies its own greeting behaviour via the system prompt.
 
+  scrollToBottom();
+}
+
+/*
+  showFollowUpChips(bubbleEl)
+    After Urvija answers, tuck up to 3 "You could also ask:" chips under her
+    reply — but only topics the parent hasn't used yet. Once every topic has
+    been covered it shows nothing, so the chat never nags.
+*/
+function showFollowUpChips(bubbleEl) {
+  const remaining = TOPIC_CHIPS.filter(function (t) {
+    return !askedTopics.includes(t.label);
+  });
+  if (remaining.length === 0) return;
+
+  const wrap = document.createElement('div');
+  wrap.classList.add('followup-chips');
+
+  const hint = document.createElement('div');
+  hint.classList.add('chips-hint');
+  hint.textContent = 'You could also ask:';
+  wrap.appendChild(hint);
+
+  const row = document.createElement('div');
+  row.classList.add('quick-reply-chips');
+  remaining.slice(0, 3).forEach(function (topic) {
+    row.appendChild(makeTopicChip(topic, wrap));
+  });
+  wrap.appendChild(row);
+
+  bubbleEl.appendChild(wrap);
   scrollToBottom();
 }
 
@@ -588,11 +864,21 @@ async function sendMessageText(text) {
     const data = await response.json();
 
     hideTypingIndicator();
-    addMessage(data.reply, 'bot');
+    const botMsg = addMessage(data.reply, 'bot');
+
+    // Play the optional new-reply chime / vibration (does nothing if muted)
+    notifyNewReply();
+
+    // Offer a couple of natural follow-up topics under the reply
+    const botBubble = botMsg.querySelector('.bubble');
+    if (botBubble) showFollowUpChips(botBubble);
 
     // Record this exchange so the next request includes it as context
     conversation.push({ role: 'user', content: text });
     conversation.push({ role: 'assistant', content: data.reply });
+
+    // Save the updated backend-memory array alongside the on-screen transcript
+    saveConversation();
 
   } catch (error) {
     // Network down, backend not running, or a 5xx error
@@ -682,6 +968,38 @@ function scrollToBottom() {
 }
 
 
+/* ── 13. START OVER / NEW CHAT ──────────────────────────────────── */
+/*
+  Clears the whole conversation and shows a fresh welcome message.
+  We ask for confirmation first so a parent can't wipe their chat by
+  accident. Everything (on-screen bubbles, backend memory, saved storage,
+  and the "already asked" topics) gets reset together.
+*/
+function startNewChat() {
+  const hasHistory = transcript.length > 0;
+  if (hasHistory && !confirm('Start a new chat? This will clear the current conversation.')) {
+    return; // Parent changed their mind
+  }
+
+  // Wipe the in-memory state
+  conversation.length = 0;   // backend memory
+  transcript = [];           // on-screen history
+  askedTopics = [];          // re-offer every suggestion topic again
+
+  // Forget the saved copy in the browser
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (err) {
+    /* ignore — nothing we can do if storage is blocked */
+  }
+
+  // Clear the screen and show a fresh welcome + chips
+  chatMessages.innerHTML = '';
+  addWelcomeMessage();
+  userInput.focus();
+}
+
+
 /* ── 10. INITIALISE ─────────────────────────────────────────────── */
 /*
   Wait until the full HTML document is parsed before running setup.
@@ -689,8 +1007,15 @@ function scrollToBottom() {
 */
 document.addEventListener('DOMContentLoaded', function () {
 
-  // Show the welcome message + quick-reply chips in the message area
-  addWelcomeMessage();
+  // Try to restore a previous conversation from the browser. If there was
+  // one, redraw it; otherwise show the fresh welcome message + chips.
+  const restored = loadConversation();
+  if (!restored) {
+    addWelcomeMessage();
+  }
+
+  // Apply the saved sound on/off choice (default: off)
+  loadSoundPreference();
 
   // After 1.5 s, pop up the two greeting tooltip bubbles
   showGreetings();
@@ -702,6 +1027,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // X button inside the header → close the chat
   closeBtn.addEventListener('click', closeChat);
+
+  // Sound toggle → mute/unmute the new-reply chime
+  if (soundBtn) soundBtn.addEventListener('click', toggleSound);
+
+  // New chat button → clear everything and start fresh
+  if (newChatBtn) newChatBtn.addEventListener('click', startNewChat);
 
   // Send button (arrow) → send the typed message
   sendBtn.addEventListener('click', sendMessage);

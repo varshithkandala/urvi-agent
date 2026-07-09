@@ -585,6 +585,50 @@ button, input {
   background: rgba(255, 255, 255, 0.30);
 }
 
+/*
+  HEADER ACTION BUTTONS
+  The row of small icon buttons on the right of the header
+  (sound toggle, new chat, close). They share a subtle glass look.
+*/
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Sound + new-chat icon buttons */
+.header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.16);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.18s ease;
+}
+.header-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.30);
+}
+/* Clear keyboard-focus outline so tab users can see where they are */
+.header-icon-btn:focus-visible,
+.close-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+/*
+  SOUND TOGGLE ICON SWAP
+  By default (sounds OFF) we show the muted bell and hide the normal one.
+  When script.js adds .is-on (sounds ON) we flip which icon is visible.
+*/
+#sound-btn .icon-bell-on  { display: none; }
+#sound-btn .icon-bell-off { display: block; }
+#sound-btn.is-on .icon-bell-on  { display: block; }
+#sound-btn.is-on .icon-bell-off { display: none; }
+
 
 /* ══ 8. MESSAGES AREA + BUBBLES ════════════════════════════════════ */
 /*
@@ -714,6 +758,20 @@ button, input {
 }
 .message.user .message-label { text-align: right; }
 
+/*
+  TIMESTAMP ("2:14 PM") shown next to the name label.
+  Slightly lighter than the name so it stays subtle. The middle dot
+  (·) separates the name from the time.
+*/
+.message-time {
+  color: #A6B7C9;
+  font-weight: 400;
+}
+.message-time::before {
+  content: ' · ';
+  color: #C3D0DD;
+}
+
 
 /* ══ 9. QUICK-REPLY CHIPS ═══════════════════════════════════════════ */
 /*
@@ -750,6 +808,26 @@ button, input {
 
 .chip:active {
   transform: translateY(0);
+}
+
+/* Clear keyboard-focus ring so tab users can see the focused chip */
+.chip:focus-visible {
+  outline: 2px solid #1C69C3;
+  outline-offset: 2px;
+}
+
+/*
+  FOLLOW-UP SUGGESTIONS
+  A little "You could also ask:" block that appears under a bot answer
+  with 1–3 topic chips, so the conversation keeps flowing naturally.
+*/
+.followup-chips {
+  margin-top: 10px;
+}
+.chips-hint {
+  font-size: 11.5px;
+  color: #7A90A8;
+  margin-bottom: 6px;
 }
 
 
@@ -1066,11 +1144,40 @@ button, input {
   cursor: default;
 }
 
+/* Tiny privacy reassurance line above the brand */
+.privacy-note {
+  font-size: 11px;
+  /* Darkened from the old muted grey for readable contrast on the cream footer */
+  color: #6B7F92;
+  text-align: center;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* "Powered by Urvi Montessori" */
 .footer-brand {
   font-size: 11px;
   color: #90AABF;
   letter-spacing: 0.03em;
+}
+
+/*
+  ACCESSIBILITY — REDUCED MOTION
+  Some people get dizzy or distracted by movement. If their device is set
+  to "reduce motion", we switch off the float, halo, bounce and fade
+  animations across the whole widget so it stays calm and still.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 
