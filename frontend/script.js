@@ -923,21 +923,165 @@ function sendMessage() {
     to a file, sends an email/Slack alert, or stores it in a database
     so a real teacher can see it and reach out to the parent.
 */
+/*
+  handleMentorRequest()
+    First step when a parent clicks "Talk to a Montessori Mentor".
+    Instead of firing a bare "someone's interested" alert, we gently ask
+    for their name + phone + email so staff get a REAL lead they can reach.
+    We show an inline form right in the chat. Sharing is optional — there's
+    a Skip button — so we never block a parent from getting help.
+*/
 function handleMentorRequest() {
-  const warmMessage =
-    "Of course! 🌸 A real teacher or staff member from Urvi Montessori " +
-    "will personally reach out to you very soon. " +
-    "Please feel free to keep asking questions here in the meantime — " +
-    "we're always happy to help!";
+  // If the request is already in progress or done, do nothing (no duplicates)
+  if (mentorBtn && mentorBtn.disabled) return;
+  // Disable the button while the form is open so we don't stack up forms
+  if (mentorBtn) mentorBtn.disabled = true;
+  showLeadForm();
+}
+
+/*
+  Small helper: builds one labelled input row for the lead form.
+  Returns { wrap, input } so the caller can read input.value later.
+*/
+function makeLeadField(labelText, type, autocomplete, placeholder) {
+  const wrap = document.createElement('label');
+  wrap.classList.add('lead-field');
+
+  const span = document.createElement('span');
+  span.textContent = labelText;
+
+  const input = document.createElement('input');
+  input.type = type;                 // 'text' | 'tel' | 'email' — helps mobile keyboards
+  input.autocomplete = autocomplete; // lets the browser offer saved details
+  input.placeholder = placeholder || '';
+
+  wrap.appendChild(span);
+  wrap.appendChild(input);
+  return { wrap, input };
+}
+
+/*
+  showLeadForm() draws the gentle "share your details" card in the chat.
+  It is built by hand (not via addMessage) so it is NOT saved to the
+  transcript — it's a transient bit of UI, like the welcome chips.
+*/
+function showLeadForm() {
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message', 'bot');
+
+  const bubble = document.createElement('div');
+  bubble.classList.add('bubble');
+
+  const intro = document.createElement('p');
+  intro.classList.add('lead-intro');
+  intro.textContent =
+    "I'd be glad to connect you with a mentor! 🌸 Please share your details " +
+    "and a teacher will reach out to you personally.";
+  bubble.appendChild(intro);
+
+  const form = document.createElement('form');
+  form.classList.add('lead-form');
+
+  const nameF  = makeLeadField('Your name', 'text',  'name',  'e.g. Priya Sharma');
+  const phoneF = makeLeadField('Phone',     'tel',   'tel',   'e.g. 98765 43210');
+  const emailF = makeLeadField('Email',     'email', 'email', 'e.g. priya@email.com');
+  form.appendChild(nameF.wrap);
+  form.appendChild(phoneF.wrap);
+  form.appendChild(emailF.wrap);
+
+  // A gentle validation message; role="alert" makes screen readers announce it
+  const err = document.createElement('div');
+  err.classList.add('lead-error');
+  err.setAttribute('role', 'alert');
+  form.appendChild(err);
+
+  const actions = document.createElement('div');
+  actions.classList.add('lead-actions');
+
+  const sendDetailsBtn = document.createElement('button');
+  sendDetailsBtn.type = 'submit';
+  sendDetailsBtn.classList.add('lead-send');
+  sendDetailsBtn.textContent = 'Send my details';
+
+  const skipBtn = document.createElement('button');
+  skipBtn.type = 'button';
+  skipBtn.classList.add('lead-skip');
+  skipBtn.textContent = 'Skip';
+
+  actions.appendChild(sendDetailsBtn);
+  actions.appendChild(skipBtn);
+  form.appendChild(actions);
+
+  bubble.appendChild(form);
+
+  const labelEl = document.createElement('div');
+  labelEl.classList.add('message-label');
+  labelEl.textContent = 'Urvija';
+
+  messageDiv.appendChild(bubble);
+  messageDiv.appendChild(labelEl);
+  chatMessages.appendChild(messageDiv);
+  scrollToBottom();
+  setTimeout(function () { nameF.input.focus(); }, 50);
+
+  // Submitting the form → validate, then send the details
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    // stopPropagation guards against the "removed element closes the chat"
+    // bug pattern (same reason as the topic chips): we remove this card below.
+    event.stopPropagation();
+
+    const name  = nameF.input.value.trim();
+    const phone = phoneF.input.value.trim();
+    const email = emailF.input.value.trim();
+
+    // Gentle check: we need a name AND at least one way to reach them.
+    if (!name || (!phone && !email)) {
+      err.textContent = 'Please add your name and a phone or email — or tap Skip.';
+      return;
+    }
+
+    messageDiv.remove();
+    completeMentorRequest({ name, phone, email });
+  });
+
+  // Skip → send the request with no contact details (works like before)
+  skipBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    messageDiv.remove();
+    completeMentorRequest(null);
+  });
+}
+
+/*
+  completeMentorRequest(contact)
+    Runs after the parent submits or skips the lead form.
+    Shows a warm confirmation, emails staff (with contact details if given,
+    plus the full conversation), and locks the mentor button.
+      contact = { name, phone, email }  OR  null when skipped
+*/
+function completeMentorRequest(contact) {
+  // Warm confirmation — personalised with their name when we have it
+  const warmMessage = contact && contact.name
+    ? `Thank you, ${contact.name}! 🌸 A teacher from Urvi Montessori will ` +
+      `reach out to you personally very soon. Please feel free to keep asking ` +
+      `questions here in the meantime — we're always happy to help!`
+    : "Of course! 🌸 A real teacher or staff member from Urvi Montessori " +
+      "will personally reach out to you very soon. " +
+      "Please feel free to keep asking questions here in the meantime — " +
+      "we're always happy to help!";
 
   addMessage(warmMessage, 'bot');
 
-  // Notify staff so a real person can follow up. We send the conversation so
-  // far so the teacher has full context before reaching out.
+  // Notify staff. We include the contact details (blank if skipped) and the
+  // full conversation so a teacher has everything they need to follow up.
   fetch(`${BACKEND_URL}/mentor-request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      name:  contact ? contact.name  : '',
+      phone: contact ? contact.phone : '',
+      email: contact ? contact.email : '',
       conversation: conversation,          // full context for the teacher
       timestamp: new Date().toISOString(),
     }),

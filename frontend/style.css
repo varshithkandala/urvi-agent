@@ -1163,6 +1163,96 @@ button, input {
   letter-spacing: 0.03em;
 }
 
+/* ══ LEAD FORM (share your details) ═════════════════════════════════ */
+/*
+  The gentle "share your details" card Urvija shows when a parent asks to
+  talk to a mentor. It lives inside a normal bot bubble.
+*/
+.lead-intro {
+  margin: 0 0 10px;
+}
+.lead-form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+/* Each field: a small label stacked above its input */
+.lead-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #5A7085;
+  font-weight: 500;
+}
+.lead-field input {
+  font-family: inherit;
+  font-size: 14px;
+  color: #1A2A3A;
+  padding: 8px 11px;
+  border: 1.5px solid #D6E8F7;
+  border-radius: 10px;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.16s ease;
+}
+.lead-field input:focus {
+  border-color: #61B5F5;
+}
+/* Gentle validation message (hidden until it has text) */
+.lead-error {
+  color: #C0392B;
+  font-size: 12px;
+  min-height: 0;
+}
+.lead-error:empty {
+  display: none;
+}
+/* Send + Skip buttons */
+.lead-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.lead-send {
+  flex: 1;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #5A9E2F 0%, #8BC53F 100%);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.lead-send:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+.lead-skip {
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  color: #7A90A8;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 16px;
+}
+.lead-skip:hover {
+  background: #EFF3F7;
+  color: #4A6072;
+}
+/* Keyboard-focus rings for accessibility */
+.lead-send:focus-visible,
+.lead-skip:focus-visible {
+  outline: 2px solid #1C69C3;
+  outline-offset: 2px;
+}
+
 /*
   ACCESSIBILITY — REDUCED MOTION
   Some people get dizzy or distracted by movement. If their device is set

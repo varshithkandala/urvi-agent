@@ -158,12 +158,26 @@ app.post('/chat', limiter, async (req, res) => {
 // A parent asked to speak with a real person. Email the staff with the
 // conversation so far so a teacher has full context before reaching out.
 app.post('/mentor-request', limiter, async (req, res) => {
-  const { conversation, timestamp } = req.body;
+  const { name, phone, email, conversation, timestamp } = req.body;
+
+  // Build a contact block for the email. If the parent shared their details
+  // we lead with those (that's a real lead staff can act on); if they skipped,
+  // we say so plainly so staff know to reply within the chat instead.
+  const hasContact = (name && name.trim()) || (phone && phone.trim()) || (email && email.trim());
+  const contactBlock = hasContact
+    ? `Contact details the parent shared:\n` +
+      `  • Name:  ${name && name.trim() ? name.trim() : '(not given)'}\n` +
+      `  • Phone: ${phone && phone.trim() ? phone.trim() : '(not given)'}\n` +
+      `  • Email: ${email && email.trim() ? email.trim() : '(not given)'}\n`
+    : `The parent chose not to share contact details — please reply to them in the chat.`;
 
   try {
     await sendStaffEmail(
-      'A parent would like to talk to a mentor',
+      hasContact
+        ? `New mentor lead${name && name.trim() ? `: ${name.trim()}` : ''}`
+        : 'A parent would like to talk to a mentor',
       `A parent clicked "Talk to a Montessori Mentor" on ${timestamp || new Date().toISOString()}.\n\n` +
+        `${contactBlock}\n\n` +
         `Please reach out to them soon. Here is their conversation with Urvija so far:\n\n` +
         `${formatConversation(conversation)}`
     );
