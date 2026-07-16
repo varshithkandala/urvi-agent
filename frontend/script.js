@@ -119,9 +119,20 @@ const STORAGE_KEY = 'urvi-chat-v1';
 */
 function saveConversation() {
   try {
+    // Base64 images are huge — a couple of shared photos can blow localStorage's
+    // ~5MB budget, and once a save throws QuotaExceededError NOTHING gets saved
+    // after that (the text chat included), so a refresh would wipe the whole
+    // conversation. To keep the text history bulletproof, we strip image data
+    // before persisting and leave a small placeholder in its place. Images still
+    // display for the rest of the live session; they just don't survive a reload.
+    const storableTranscript = transcript.map((m) =>
+      m.image
+        ? { sender: m.sender, text: m.text || '📷 (photo shared)', time: m.time, image: null }
+        : m
+    );
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ conversation, transcript, askedTopics })
+      JSON.stringify({ conversation, transcript: storableTranscript, askedTopics })
     );
   } catch (err) {
     console.warn('Could not save chat:', err);

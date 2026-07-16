@@ -146,7 +146,20 @@ app.post('/chat', limiter, async (req, res) => {
       messages,
     });
 
-    res.json({ reply: response.content[0].text });
+    // Pull the reply out defensively. We look for the first *text* block
+    // rather than assuming content[0] is text — if the API ever returns an
+    // empty or non-text first block, blindly reading .text would throw and
+    // drop the parent into a generic 500. If there's genuinely no text, we
+    // surface a clean error instead of crashing the handler.
+    const textBlock = Array.isArray(response.content)
+      ? response.content.find((b) => b.type === 'text')
+      : null;
+    if (!textBlock || !textBlock.text) {
+      console.error('No text block in Claude response:', JSON.stringify(response.content));
+      return res.status(502).json({ error: 'Something went wrong' });
+    }
+
+    res.json({ reply: textBlock.text });
 
   } catch (error) {
     console.error('Error:', error);
