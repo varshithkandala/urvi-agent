@@ -1,0 +1,456 @@
+/*
+  ═══════════════════════════════════════════════════════════════════
+  URVI MONTESSORI — MOBILE FULL-SCREEN CHAT DEMO STYLESHEET
+  ═══════════════════════════════════════════════════════════════════
+
+  This is a SEPARATE stylesheet from style.css (the floating-widget
+  version). It reuses the same brand colours and fonts, but the layout
+  is completely different: instead of a small popup window, the chat
+  fills the ENTIRE phone screen because the chat IS the page.
+
+  BRAND COLORS (same palette as the floating widget):
+    Header gradient   #14529C → #2E86DE
+    User bubble       #5A9E2F → #8BC53F (green gradient)
+    Chip / accent blue #1C69C3, border #61B5F5
+    Paper background  #FAF9F6
+    Bot bubble        #FFFFFF with #D6E8F7 border
+    Dark text         #1A2A3A
+    Mid text          #5A7088
+
+  FILE STRUCTURE:
+    1. Global reset
+    2. Keyframe animations
+    3. prefers-reduced-motion overrides
+    4. .app shell (full-screen 100dvh layout)
+    5. Header
+    6. Messages area + bubbles
+    7. Quick-reply chips (thumb-sized)
+    8. Typing indicator
+    9. Input bar (pinned to bottom)
+  ═══════════════════════════════════════════════════════════════════
+*/
+
+
+/* ══ 1. GLOBAL RESET ════════════════════════════════════════════════ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  /*
+    Prevents the whole PAGE from scrolling — only the .messages area
+    (section 6 below) should scroll. This keeps the header and input
+    bar locked in place, which is what makes this feel like a native
+    app instead of a webpage.
+  */
+  height: 100%;
+  overflow: hidden;
+  background: #FAF9F6;
+}
+
+body {
+  font-family: 'DM Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  color: #1A2A3A;
+}
+
+button, input {
+  font-family: inherit;
+}
+
+
+/* ══ 2. KEYFRAME ANIMATIONS ═════════════════════════════════════════ */
+
+/* Header emblem halo — a soft "breathing" glow behind the logo */
+@keyframes emblem-glow-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.9;  }
+  50%       { transform: scale(1.25); opacity: 0.45; }
+}
+
+/* Green "online" dot in the subtitle — gentle pulse */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  50%       { opacity: 0.6; transform: scale(1.3); }
+}
+
+/* Each new message bubble fades + lifts gently into view */
+@keyframes msg-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Three bouncing dots for the "Urvija is typing…" indicator */
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
+  40%            { transform: translateY(-6px); opacity: 1;   }
+}
+
+
+/* ══ 3. RESPECT prefers-reduced-motion ══════════════════════════════ */
+/*
+  Some people get dizzy or distracted by movement. If their phone is
+  set to "reduce motion", switch off every decorative animation —
+  the chat stays fully usable, just calm and still.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* ══ 4. .APP SHELL — FULL-SCREEN LAYOUT ═════════════════════════════ */
+/*
+  This is the key trick for a full-screen mobile chat:
+
+    height: 100dvh   (NOT 100vh!)
+
+  "vh" (viewport height) on phones is measured with the browser's
+  address bar HIDDEN, which is misleading — as soon as the page loads
+  and the address bar is showing, a 100vh box is actually TALLER than
+  the visible screen, so the bottom (our input bar!) gets pushed off
+  screen behind the browser's own UI.
+
+  "dvh" (dynamic viewport height) instead tracks the REAL visible area
+  and updates live as the address bar shows/hides while scrolling —
+  so the input bar never disappears.
+
+  display: flex + flex-direction: column stacks header/messages/input
+  vertically, and flex: 1 on .messages (section 6) makes it eat up all
+  the leftover space between the header and the input bar automatically.
+*/
+.app {
+  height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #FAF9F6;
+  overflow: hidden;
+
+  /*
+    Padding for phones with a notch/home-indicator (e.g. iPhone) so our
+    content never sits underneath the rounded corners or the home bar.
+    env(safe-area-inset-*) is 0 on phones without a notch, so this is
+    always safe to include.
+  */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+
+/* ══ 5. HEADER ═══════════════════════════════════════════════════════ */
+/*
+  Deliberately SLIM — on a phone, every pixel of vertical space spent
+  on the header is a pixel not spent on the conversation. Compare to
+  the floating widget's header, which can afford to be taller.
+*/
+.header {
+  background: linear-gradient(180deg, #14529C 0%, #2E86DE 100%);
+  color: #fff;
+  flex-shrink: 0;   /* Never shrink, even if content below is tall */
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  padding-top: calc(10px + env(safe-area-inset-top));  /* clear the phone notch */
+
+  border-bottom: 1px solid rgba(97, 181, 245, 0.28);
+}
+
+/* Wrapper lets the glow (::before) sit behind the logo without
+   disturbing the flex layout of the header */
+.logo-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.35) 45%,
+    transparent 75%
+  );
+  animation: emblem-glow-pulse 2.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.logo {
+  position: relative;
+  z-index: 1;   /* sits above the glow */
+  width: 34px;  /* smaller than the widget's 40px — slim header */
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.52);
+  /* Same trick as the main widget: black-then-invert turns the emblem
+     into a crisp white silhouette that reads clearly on the blue header */
+  filter: brightness(0) invert(1);
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 11.5px;
+  opacity: 0.88;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: #8BC53F;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse-dot 2.6s ease-in-out infinite;
+}
+
+
+/* ══ 6. MESSAGES AREA + BUBBLES ═════════════════════════════════════ */
+/*
+  flex: 1 makes this box grow to fill every bit of leftover space
+  between the header and the input bar — however tall or short those
+  end up being on a given phone.
+*/
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;  /* smooth momentum scroll on iOS */
+  padding: 16px 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+
+/* Thin, brand-colored scrollbar (mostly a desktop-preview nicety) */
+.messages::-webkit-scrollbar       { width: 4px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb {
+  background: #B8D4EE;
+  border-radius: 4px;
+}
+
+/* Message row wrapper */
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 86%;
+  animation: msg-fade-in 0.22s ease both;
+}
+
+.message.bot  { align-self: flex-start; }
+.message.user { align-self: flex-end;   }
+
+/* The colored speech bubble itself */
+.bubble {
+  padding: 11px 14px;
+  border-radius: 18px;
+  line-height: 1.55;
+  font-size: 15px;          /* slightly larger than the widget — easier
+                                to read on a phone held at arm's length */
+  word-break: break-word;
+}
+
+/* Bot bubble: white with a light blue border, tail on the left */
+.message.bot .bubble {
+  background-color: #FFFFFF;
+  color: #1A2A3A;
+  border: 1px solid #D6E8F7;
+  border-bottom-left-radius: 4px;
+}
+
+/*
+  Bot bubbles are filled via marked.js (Markdown → HTML), so reset the
+  default browser spacing on paragraphs/lists so it sits flush.
+*/
+.message.bot .bubble p {
+  margin: 0;
+}
+.message.bot .bubble p + p {
+  margin-top: 8px;
+}
+.message.bot .bubble ul,
+.message.bot .bubble ol {
+  margin: 6px 0 0 18px;
+}
+.message.bot .bubble li + li {
+  margin-top: 3px;
+}
+
+/* User bubble: green gradient, tail on the right */
+.message.user .bubble {
+  background: linear-gradient(135deg, #5A9E2F 0%, #8BC53F 100%);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+
+/* ══ 7. QUICK-REPLY CHIPS (thumb-sized) ═════════════════════════════ */
+/*
+  Unlike the floating widget's small inline pill chips, these are
+  STACKED, full-width, and at least 44px tall — the standard minimum
+  comfortable touch-target size (per Apple/Google mobile guidelines) so
+  a thumb can tap confidently without mis-hitting a neighbouring chip.
+*/
+.quick-reply-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chip {
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1.5px solid #61B5F5;
+  background: #EFF7FF;
+  color: #1C69C3;
+  font-size: 14.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.16s, color 0.16s, border-color 0.16s, transform 0.12s;
+}
+
+.chip:active {
+  background: #1C69C3;
+  border-color: #1C69C3;
+  color: #fff;
+  transform: scale(0.98);
+}
+
+/* Keyboard-focus ring for accessibility */
+.chip:focus-visible {
+  outline: 2px solid #1C69C3;
+  outline-offset: 2px;
+}
+
+
+/* ══ 8. TYPING INDICATOR ════════════════════════════════════════════ */
+/*
+  Three bouncing dots shown while we wait for the backend's reply.
+  Identical in spirit to the floating widget's version.
+*/
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 13px 16px;
+  background: #fff;
+  border: 1px solid #D6E8F7;
+  border-radius: 18px;
+  border-bottom-left-radius: 4px;
+  width: fit-content;
+}
+
+.typing-indicator span {
+  display: block;
+  width: 7px;
+  height: 7px;
+  background-color: #61B5F5;
+  border-radius: 50%;
+  animation: dot-bounce 1.2s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) { animation-delay: 0s;    }
+.typing-indicator span:nth-child(2) { animation-delay: 0.18s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.36s; }
+
+
+/* ══ 9. INPUT BAR (pinned to the bottom) ════════════════════════════ */
+/*
+  Because .app is a flex column that's exactly 100dvh tall, this bar
+  naturally sits at the very bottom without needing position: fixed —
+  and because it's a normal flex child (not fixed/absolute), it moves
+  up automatically when the on-screen keyboard shrinks the viewport.
+*/
+.input-bar {
+  flex-shrink: 0;   /* never let the header/messages squeeze this away */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  /* Extra bottom padding clears the iPhone home-indicator */
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid #D6E8F7;
+  background-color: #FAF9F6;
+}
+
+.text-input {
+  flex: 1;
+  /* 16px font-size stops iOS Safari from auto-zooming the page when
+     the input is focused (anything smaller than 16px triggers zoom) */
+  font-size: 16px;
+  padding: 12px 16px;
+  border: 1.5px solid #C0D8F0;
+  border-radius: 24px;
+  background-color: #fff;
+  color: #1A2A3A;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.text-input:focus {
+  border-color: #1C69C3;
+  box-shadow: 0 0 0 3px rgba(28, 105, 195, 0.12);
+}
+
+.text-input::placeholder {
+  color: #90AABF;
+}
+
+/* Round send button — 44px so it's an easy thumb target */
+.send-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #1C69C3;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.send-btn:active {
+  transform: scale(0.94);
+}
+
+/* Gray out the send button while waiting for a reply */
+.send-btn:disabled {
+  background-color: #A8C8E8;
+  cursor: not-allowed;
+  transform: none;
+}

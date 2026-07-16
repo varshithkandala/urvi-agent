@@ -5,7 +5,7 @@ Knowledge base for Urvija, the school's AI assistant.
 ABOUT
 ========================================
 Name: URVI Montessori — House of Children
-Founded: 2026
+Founded: May 2026
 Philosophy: A core Montessori principle guides us — for the child, "Help me do it by myself."
 Our approach: We follow the child, not a fixed curriculum, allowing genuine learning to unfold naturally and grow exponentially.
 
@@ -14,7 +14,7 @@ LOCATION & CONTACT
 ========================================
 Address: H.No. 428, #2-4-665/1, P. No. 82, New Nagole Colony, Street No. 9B, Nagole, Hyderabad, Telangana 500068
 Phone: +91 91003 06999
-Email: urvimontessorischool@gmail.com
+Email: info@urvimontessori.com
 Website: urvimontessori.com
 
 ========================================
@@ -50,9 +50,8 @@ at +91 91003 06999 or urvimontessorischool@gmail.com.
 ADMISSION PROCESS
 ========================================
 Step 1: Schedule an enquiry call.
-Step 2: Parent-Child Orientation.
-Step 3: Application Process.
-Step 4: Admission into URVI.
+Step 2: Application Process.
+Step 3: Admission into URVI.
 
 Documents required:
 - Birth Certificate

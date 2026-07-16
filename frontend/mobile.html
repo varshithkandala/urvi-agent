@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <!--
+    MOBILE VIEWPORT META TAG
+    - width=device-width, initial-scale=1  → standard "don't zoom out" setup
+    - viewport-fit=cover                   → lets us pad around the iPhone
+                                              notch/home-indicator using
+                                              env(safe-area-inset-*) in CSS
+    - interactive-widget=resizes-content   → tells modern mobile Chrome to
+                                              shrink the page (not just cover
+                                              it) when the on-screen keyboard
+                                              opens, so our "pinned to bottom"
+                                              input bar actually stays above
+                                              the keyboard instead of hiding
+                                              behind it.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <title>Urvija — Urvi Montessori Chat</title>
+
+  <!-- Same Google Font as the main widget, so the brand feels identical -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="mobile.css" />
+
+  <!--
+    MARKDOWN RENDERING (bot replies only — see mobile.js "ADD A MESSAGE"):
+      marked     — turns Markdown text ("**bold**", "- bullets") into HTML
+      DOMPurify  — cleans that HTML before it's inserted into the page, so
+                   nothing unsafe (like a <script> tag) can ever run.
+    User messages never go through these — they're always shown as plain text.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+</head>
+<body>
+
+  <!--
+    ══════════════════════════════════════════════════════════════════
+    THIS PAGE *IS* THE CHAT — no floating bubble, no "open chat" step.
+    A parent scans a QR code on a print banner and lands directly here,
+    full-screen, on their phone. So the whole page is one tall column:
+
+        .app
+          ├─ .header    (slim — logo, "Urvija", subtitle)
+          ├─ .messages  (scrollable, fills all the leftover space)
+          └─ .input-bar (always pinned to the very bottom)
+
+    .app is exactly 100dvh tall (set in mobile.css) and is a flex COLUMN,
+    so the browser does the "pin header on top / input on bottom" layout
+    for us automatically — no position:fixed hacks needed.
+    ══════════════════════════════════════════════════════════════════
+  -->
+  <div class="app">
+
+    <!-- ── HEADER (slim, no close button — there's nothing to close) ── -->
+    <header class="header">
+      <!-- Wrapper lets the CSS glow (::before) sit behind the logo -->
+      <div class="logo-wrap">
+        <img src="urvi-emblem.png" alt="Urvi Montessori logo" class="logo" />
+      </div>
+      <div class="header-text">
+        <div class="header-title">Urvija</div>
+        <div class="header-subtitle">
+          <span class="status-dot" aria-hidden="true"></span>
+          Urvi Montessori Assistant
+        </div>
+      </div>
+    </header>
+
+    <!-- ── MESSAGES (scrollable area, fills remaining height) ── -->
+    <!--
+      role="log" + aria-live="polite" tells screen readers to announce
+      new messages as they arrive, without this file needing any extra
+      JavaScript for accessibility.
+    -->
+    <div id="messages" class="messages" role="log" aria-live="polite">
+      <!-- Populated by mobile.js: welcome message + every chat bubble -->
+    </div>
+
+    <!-- ── INPUT BAR (pinned to the bottom, above the keyboard) ── -->
+    <div class="input-bar">
+      <input
+        type="text"
+        id="user-input"
+        class="text-input"
+        placeholder="Type your message…"
+        autocomplete="off"
+        aria-label="Type your message"
+      />
+      <!-- Paper-plane send button (same icon as the main widget) -->
+      <button id="send-btn" class="send-btn" type="button" aria-label="Send message">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+             viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+
+  </div><!-- end .app -->
+
+  <!-- Script goes last so every element above already exists when it runs -->
+  <script src="mobile.js"></script>
+</body>
+</html>
