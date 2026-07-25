@@ -8,7 +8,38 @@ const nodemailer = require('nodemailer');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
-app.use(cors());
+
+// ── CORS (which websites may call this API) ───────────────────────
+// This API is public, and every /chat call costs money. With no origin
+// check, ANY website could embed our bot and run up the bill. Set
+// ALLOWED_ORIGINS in the environment (comma-separated) to lock it to the
+// school's domain(s), e.g. in the Render dashboard:
+//   ALLOWED_ORIGINS=https://urvimontessori.com,https://www.urvimontessori.com
+// If it's left unset we stay open (so nothing breaks before it's configured),
+// but log a reminder. This lets you lock down later without a code change.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+if (allowedOrigins.length === 0) {
+  console.warn(
+    '[cors] ALLOWED_ORIGINS not set — allowing all origins. Set it to your ' +
+    'school domain(s) so other sites cannot use your paid API.'
+  );
+  app.use(cors());
+} else {
+  app.use(
+    cors({
+      origin(origin, callback) {
+        // No Origin header (curl, health pings, same-origin) → always allow.
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error('Not allowed by CORS'));
+      },
+    })
+  );
+}
+
 // Allow larger bodies so parents can attach photos (base64 images are bulky).
 app.use(express.json({ limit: '10mb' }));
 
@@ -225,6 +256,17 @@ app.post('/feedback', limiter, async (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log('Urvi Agent is running on port 3000');
+// ── HEALTH CHECK (keep-alive) ─────────────────────────────────────
+// A tiny, free endpoint an uptime pinger (e.g. UptimeRobot, cron-job.org)
+// can hit every ~10 minutes to keep the free Render server awake. Without
+// this the server sleeps after ~15 min idle, and the next parent waits
+// ~30 seconds for it to wake up. This route does no work and calls no paid
+// API, so pinging it costs nothing.
+app.get('/health', (req, res) => {
+  res.json({ ok: true });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Urvi Agent is running on port ${PORT}`);
 });

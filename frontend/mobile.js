@@ -49,6 +49,10 @@ const BACKEND_URL = 'https://urvi-agent.onrender.com';
 */
 const conversation = [];
 
+// The backend only keeps the most recent 20 messages, so there's no point
+// re-uploading the whole chat every time — we trim to the same window.
+const MAX_HISTORY_SENT = 20;
+
 
 /* ── 3. ADD A MESSAGE BUBBLE TO THE SCREEN ──────────────────────── */
 /*
@@ -231,7 +235,7 @@ async function sendMessageText(text) {
       },
       // Send the new message plus the conversation so far, so the
       // backend can reply with full context (memory).
-      body: JSON.stringify({ message: text, history: conversation }),
+      body: JSON.stringify({ message: text, history: conversation.slice(-MAX_HISTORY_SENT) }),
     });
 
     // response.ok is true for status codes 200–299

@@ -826,6 +826,11 @@ let isSending = false;
 */
 const conversation = [];
 
+// How many past messages to send along for context. The backend only keeps
+// the most recent 20 anyway, so there's no point uploading the entire chat on
+// every request — we trim to the same window to keep requests small and fast.
+const MAX_HISTORY_SENT = 20;
+
 async function sendMessageText(text) {
   // Nothing to send, or already waiting for a reply
   if (!text || isSending) return;
@@ -863,7 +868,7 @@ async function sendMessageText(text) {
       },
       // Send the new message, the conversation so far (for memory), and the
       // attached image if there is one (imageToSend is null when there isn't).
-      body: JSON.stringify({ message: text, history: conversation, image: imageToSend }),
+      body: JSON.stringify({ message: text, history: conversation.slice(-MAX_HISTORY_SENT), image: imageToSend }),
     });
 
     // response.ok is true for status codes 200–299
