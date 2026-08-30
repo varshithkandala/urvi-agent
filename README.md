@@ -1,5 +1,8 @@
 # urvi-agent
-A fully functional AI agent, developed as a personal assistant for URVI Montessori.
+
+![CI](https://github.com/varshithkandala/urvi-agent/actions/workflows/ci.yml/badge.svg)
+
+A fully functional AI agent, developed as a personal assistant for URVI Montessori. 
 
 
 The ideas we have:
