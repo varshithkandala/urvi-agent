@@ -56,6 +56,20 @@ test.beforeEach(async ({ page }) => {
   });
 
   await page.goto(FRONTEND_PATH);
+
+  // The chat bubble has a continuous "float" animation, and its halo has
+  // a continuous pulse — both infinite, so the button never stops moving.
+  // Playwright waits for an element to be "stable" before clicking, which
+  // an infinitely-animating element never satisfies. addStyleTag runs
+  // after the page is fully loaded, so there's no race with page parsing.
+  await page.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    `,
+  });
 });
 
 test('chat window is hidden until the bubble is clicked', async ({ page }) => {
